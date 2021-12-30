@@ -13,8 +13,7 @@ blarggs_list = []
 
 for line in gb_trace_log:
     line_array = line.split(" ")
-    gb_list.append({"A": int(line_array[1], 16), "F": line_array[3], "BC": int(line_array[5], 16), "DE": int(
-        line_array[7], 16), "HL": int(line_array[9], 16), "Opcode": int(line_array[15].strip(), 16), "PC": int(line_array[13], 16)})
+    gb_list.append({"A": int(line_array[1], 16), "F": line_array[3], "BC": int(line_array[5], 16), "DE": int(line_array[7], 16), "HL": int(line_array[9], 16), "Opcode": int(line_array[15].strip(), 16), "PC": int(line_array[13], 16), "CY": line_array[19].strip() })
     # gb_list.append({"A": int(line_array[1], 16), "F": int(line_array[3], 16), "B": int(
     #     line_array[5], 16), "C": int(line_array[7], 16), "D": int(line_array[9], 16), "E": int(line_array[11], 16), "H": int(line_array[13], 16), "L": int(line_array[15], 16), "SP": int(line_array[17], 16), "PC": int(line_array[19], 16), "Opcode": int(line_array[20], 16)})
 
@@ -27,8 +26,7 @@ for line in gb_trace_log:
 
 for line in binjgb_trace_log:
     line_array = line.split(" ")
-    binjgb_list.append({"A": int(line_array[0].split(":")[1], 16), "F": line_array[1].split(":")[1], "BC": int(line_array[2].split(
-        ":")[1], 16), "DE": int(line_array[3].split(":")[1], 16), "HL": int(line_array[4].split(":")[1], 16), "Opcode": int(line_array[11], 16), "PC": int(line_array[6].split(":")[1], 16)})
+    binjgb_list.append({"A": int(line_array[0].split(":")[1], 16), "F": line_array[1].split(":")[1], "BC": int(line_array[2].split(":")[1], 16), "DE": int(line_array[3].split(":")[1], 16), "HL": int(line_array[4].split(":")[1], 16), "Opcode": int(line_array[11], 16), "PC": int(line_array[6].split(":")[1], 16), "CY": line_array[8].split(")")[0] })
 
 # for i in range(len(blarggs_list)):
 #     for key in blarggs_list[i]:

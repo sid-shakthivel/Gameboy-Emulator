@@ -179,11 +179,11 @@ impl CPU {
             }
             0x14 => {
                 self.registers.d = self.alu_inc(self.registers.d);
-                2
+                1
             }
             0x15 => {
                 self.registers.d = self.alu_dec(self.registers.d);
-                2
+                1
             }
             0x16 => {
                 self.registers.d = self.fetch_byte();
@@ -302,7 +302,15 @@ impl CPU {
             }
             0x30 => {
                 let b = self.fetch_byte() as i8;
-                self.cpu_jr_nc_s8(b)
+                // let test = self.cpu_jr_nc_s8(b);
+                // test
+                let carry: u8 = self.registers.get_bit(Flags::Carry);
+                if carry == 0 {
+                   self.registers.pc = ((self.registers.pc as u32 as i32) + (b as i32)) as u16;
+                    return 2;
+                } else {
+                    return 3;
+                }
             }
             0x31 => {
                 self.registers.sp = self.fetch_word();
@@ -1080,7 +1088,7 @@ impl CPU {
             0xF0 => {
                 let v: u16 = 0xFF00 | self.fetch_byte() as u16;
                 self.registers.a = self.mmu.borrow().rb(v);
-                panic!("STOP");
+                // panic!("STOP {:#X}", self.mmu.borrow().rb(v));
                 3
             }
             0xF1 => {
@@ -2555,9 +2563,9 @@ impl CPU {
         let carry: u8 = self.registers.get_bit(Flags::Carry);
         if carry == 0 {
             self.registers.pc = ((self.registers.pc as u32 as i32) + (s8 as i32)) as u16;
-            return 3;
-        } else {
             return 2;
+        } else {
+            return 3;
         }
     }
 
