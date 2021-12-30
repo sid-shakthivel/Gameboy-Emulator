@@ -13,7 +13,7 @@ blarggs_list = []
 
 for line in gb_trace_log:
     line_array = line.split(" ")
-    gb_list.append({"A": int(line_array[1], 16), "FL": line_array[3], "BC": int(line_array[5], 16), "DE": int(
+    gb_list.append({"A": int(line_array[1], 16), "F": line_array[3], "BC": int(line_array[5], 16), "DE": int(
         line_array[7], 16), "HL": int(line_array[9], 16), "Opcode": int(line_array[15].strip(), 16), "PC": int(line_array[13], 16)})
     # gb_list.append({"A": int(line_array[1], 16), "F": int(line_array[3], 16), "B": int(
     #     line_array[5], 16), "C": int(line_array[7], 16), "D": int(line_array[9], 16), "E": int(line_array[11], 16), "H": int(line_array[13], 16), "L": int(line_array[15], 16), "SP": int(line_array[17], 16), "PC": int(line_array[19], 16), "Opcode": int(line_array[20], 16)})
@@ -38,7 +38,7 @@ for line in binjgb_trace_log:
 #             print(blarggs_list[i])
 #             exit()
 
-for i in range(len(binjgb_list)):
+for i in range(len(gb_list)):
     for key in binjgb_list[i]:
         if (key in gb_list[i] and binjgb_list[i][key] != gb_list[i][key]):
             print("Error on line " + str(i))

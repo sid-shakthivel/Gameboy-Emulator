@@ -24,6 +24,7 @@ const HEIGHT: usize = 144;
 fn main() {
     let mut file_content: Vec<u8> = Vec::new();
     let mut file: File = File::open("ROMS/cpu_instrs/individual/05-op rp.gb").unwrap();
+    // let mut file: File = File::open("ROMS/cpu_instrs/individual/04-op r,imm.gb").unwrap();
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/06-ld r,r.gb").unwrap();
     // let mut file: File = File::open("ROMS/Tetris_1").unwrap();
     file.read_to_end(&mut file_content).unwrap();
@@ -69,24 +70,13 @@ fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, timer: RefCell<Timer>, mut wi
     const MAXCYCLES: u32 = 69905;
     let mut cycles_elapsed: u32 = 0;
 
-    let mut test = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
         while cycles_elapsed < MAXCYCLES {
             let opcode = cpu.borrow_mut().fetch_special_opcode();
 
-            // let flags = cpu.borrow_mut().registers.compose_flags();
-            // println!(
-            //     "A: {:#X} F: {} BC: {:#X} DE: {:#X} HL: {:#X} SP: {:#X} PC: {:#X} Opcode: {:#X}",
-            //     cpu.borrow().registers.a,
-            //     flags,
-            //     cpu.borrow().registers.bc(),
-            //     cpu.borrow().registers.de(),
-            //     cpu.borrow().registers.hl(),
-            //     cpu.borrow().registers.sp,
-            //     cpu.borrow().registers.pc - 1,
-            //     opcode,
-            // );
-
+            let flags = cpu.borrow_mut().registers.compose_flags();
+            println!("A: {:#X} F: {} BC: {:#X} DE: {:#X} HL: {:#X} SP: {:#X} PC: {:#X} Opcode: {:#X}", cpu.borrow().registers.a, flags, cpu.borrow().registers.bc(), cpu.borrow().registers.de(), cpu.borrow().registers.hl(), cpu.borrow().registers.sp, cpu.borrow().registers.pc - 1, opcode);
+            println!("{} {}", cpu.borrow().mmu.borrow().rb(0xFF44), cycles_elapsed);
             let cycles: u16 = cpu.borrow_mut().execute(opcode) as u16;
             cycles_elapsed += cycles as u32;
 

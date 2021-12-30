@@ -19,6 +19,13 @@ impl MMU {
             high_ram: [0; 127],
             interrupt_enabled_register: 0,
         };
+
+        let mut i: usize = 0;
+        for byte in mmu.high_ram {
+            mmu.high_ram[i] = 0xFF;
+            i += 1;
+        }
+
         mmu.wb(0xFF05, 0x00);
         mmu.wb(0xFF06, 0x00);
         mmu.wb(0xFF07, 0x00);
@@ -52,12 +59,6 @@ impl MMU {
         mmu.wb(0xFFFF, 0x00);
 
         // mmu.io_ram[0xFF44 - 0xFF00] = 0x90;
-
-        let mut i: usize = 0;
-        for byte in mmu.high_ram {
-            mmu.high_ram[i] = 0xFF;
-            i += 1;
-        }
 
         let mut i: usize = 0;
         for byte in rom {

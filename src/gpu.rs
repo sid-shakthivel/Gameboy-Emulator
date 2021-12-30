@@ -6,7 +6,7 @@ use std::rc::Rc;
 // Write interrupt call
 
 pub struct GPU {
-    scanline_counter: u16,
+    scanline_counter: i32,
     mmu: Rc<RefCell<MMU>>,
     cpu: Rc<RefCell<CPU>>,
     pub screen_data: [u32; 23040],
@@ -23,19 +23,16 @@ impl GPU {
     }
 
     pub fn update_graphics(&mut self, cycles: u16) {
-        // self.set_lcd_status();
+        self.set_lcd_status();
 
         if self.is_lcd_enabled() == 0x80 {
-            self.scanline_counter = self.scanline_counter.wrapping_sub(cycles);
+            self.scanline_counter = self.scanline_counter - (cycles as i32);
         } else {
             println!("LCD not enabled?");
             return;
         }
 
         if self.scanline_counter <= 0 {
-            let v = self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00].wrapping_add(1);
-            self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = v;
-
             self.scanline_counter = 456;
             let current_scanline: u8 = self.mmu.borrow().rb(0xFF44);
 
@@ -49,6 +46,9 @@ impl GPU {
                 // Draw scanline
                 self.draw_scanline();
             }
+
+            let v = self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00].wrapping_add(1);
+            self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = v;
         }
     }
 

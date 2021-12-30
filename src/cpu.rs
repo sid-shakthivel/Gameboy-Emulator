@@ -29,7 +29,7 @@ impl CPU {
             interrupt_master: true,
         };
 
-        cpu.registers.set_af(0x11B0);
+        cpu.registers.set_af(0x01B0);
         cpu.registers.set_bc(0x0013);
         cpu.registers.set_de(0x00D8);
         cpu.registers.set_hl(0x014D);
@@ -1080,6 +1080,7 @@ impl CPU {
             0xF0 => {
                 let v: u16 = 0xFF00 | self.fetch_byte() as u16;
                 self.registers.a = self.mmu.borrow().rb(v);
+                panic!("STOP");
                 3
             }
             0xF1 => {
@@ -2416,7 +2417,8 @@ impl CPU {
 
     fn alu_sbc(&mut self, register_b: u8) {
         let carry = self.registers.get_bit(Flags::Carry);
-        let temp = self.registers.a - (register_b + carry);
+        // let temp = self.registers.a - (register_b + carry);
+        let temp = self.registers.a.wrapping_sub(register_b).wrapping_sub(carry);
         self.cpu_zero_check(temp);
         self.registers.set_bit(Flags::Subtract);
         self.cpu_half_carry_check(temp);
