@@ -24,6 +24,7 @@ const HEIGHT: usize = 144;
 fn main() {
     let mut file_content: Vec<u8> = Vec::new();
     let mut file: File = File::open("ROMS/cpu_instrs/individual/05-op rp.gb").unwrap();
+    // let mut file: File = File::open("ROMS/cpu_instrs/individual/06-ld r,r.gb").unwrap();
     // let mut file: File = File::open("ROMS/Tetris_1").unwrap();
     file.read_to_end(&mut file_content).unwrap();
     let mmu: Rc<RefCell<MMU>> = Rc::new(RefCell::new(MMU::new(file_content)));

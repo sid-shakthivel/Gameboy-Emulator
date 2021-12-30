@@ -195,19 +195,17 @@ impl GPU {
         // println!("{:#X}", y_pos);
         let tile_row: u16 = (((y_pos / 8) as u16) * 32) as u16;
 
-        // 160 vertical pixels
-        for pixel in 0..160 {
-            x_pos = scroll_x + pixel;
+        // 160 vertical pixels and 20 tiles
+        for i in 0..20 {
+            // Determine Horizontal Tile
+            // Determine Line
+            // For Each Horizontal Pixel Loop and Adjust Framebuffer
 
-            if is_window && pixel >= window_x {
-                x_pos = pixel - window_x;
-            }
-
-            // Determine horizontal tile
+            let base = i * 8;
+            x_pos = base + scroll_x;
             let tile_col: u16 = (x_pos / 8) as u16;
             let mut signed_tile_identifier: i16 = 0;
             let mut unsigned_tile_identifier: u16 = 0;
-
             let tile_identifier_address = tile_identity_address + tile_col + tile_row;
 
             if is_signed {
@@ -225,36 +223,39 @@ impl GPU {
                 }
             }
 
-            // Get vertical line of tile
             let mut line: u16 = (y_pos % 8) as u16;
+            line *= 2;
 
-            // Get lines of data eg 0-1 for first bit
             let data1 = self.mmu.borrow().rb(tile_data_address + line);
             let data2 = self.mmu.borrow().rb(tile_data_address + line + 1);
+            for mut j in (0..8).rev() {
+                let data_colour: u8 = self.get_bit(data2, j) << 1 | self.get_bit(data1, j);
 
-            // Get horizontal bit of tile line
-            let mut colour_bit: i8 = (y_pos % 8) as i8;
+                let rgb = match data_colour {
+                    0b00 => self.get_colour(colour_palette, 0),
+                    0b01 => self.get_colour(colour_palette, 2),
+                    0b10 => self.get_colour(colour_palette, 4),
+                    0b11 => self.get_colour(colour_palette, 6),
+                    _ => {
+                        panic!("Wrong Combination");
+                    }
+                };
 
-            let data_colour: u8 =
-                self.get_bit(data2, colour_bit) << 1 | self.get_bit(data1, colour_bit);
+                j -= 7;
+                j *= -1;
 
-            let rgb = match data_colour {
-                0b00 => self.get_colour(colour_palette, 0),
-                0b01 => self.get_colour(colour_palette, 2),
-                0b10 => self.get_colour(colour_palette, 4),
-                0b11 => self.get_colour(colour_palette, 6),
-                _ => {
-                    panic!("Wrong Combination");
+                let mut res: u32 = 0;
+                res = res << 8 | (rgb.0 as u32);
+                res = res << 8 | (rgb.1 as u32);
+                res = res << 8 | (rgb.2 as u32);
+
+                let test: usize = j as usize + base as usize;
+                if current_scanline <= 143 && test <= 159 {
+                    let index: usize =
+                        ((current_scanline) as usize * 160) + (j as usize + base as usize);
+                    self.screen_data[index] = res;
                 }
-            };
-
-            let mut res: u32 = 0;
-            res = res << 8 | (rgb.0 as u32);
-            res = res << 8 | (rgb.1 as u32);
-            res = res << 8 | (rgb.2 as u32);
-
-            let index: usize = ((current_scanline as usize) * 160) + (pixel as usize);
-            self.screen_data[index] = res;
+            }
         }
     }
 
@@ -310,6 +311,5 @@ impl GPU {
             }
             i += 2;
         }
-        // panic!("byye");
     }
 }
