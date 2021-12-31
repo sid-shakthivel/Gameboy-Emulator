@@ -21,10 +21,10 @@ impl MMU {
         };
 
         let mut i: usize = 0;
-        for byte in mmu.high_ram {
-            mmu.high_ram[i] = 0xFF;
-            i += 1;
-        }
+        // for byte in mmu.high_ram {
+            // mmu.high_ram[i] = 0xFF;
+            // i += 1;
+        // }
 
         mmu.wb(0xFF05, 0x00);
         mmu.wb(0xFF06, 0x00);

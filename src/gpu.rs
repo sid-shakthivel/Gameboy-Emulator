@@ -34,6 +34,7 @@ impl GPU {
 
         if self.scanline_counter >= 456 {
             self.scanline_counter = 0;
+
             let current_scanline: u8 = self.mmu.borrow().rb(0xFF44);
 
             if current_scanline == 144 {
@@ -42,15 +43,14 @@ impl GPU {
             } else if current_scanline > 153 {
                 // Reset Scanline
                 self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = 0;
-            } else {
+                return;
+            } else if current_scanline < 144 {
                 // Draw scanline
                 self.draw_scanline();
             }
 
             let v = self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00].wrapping_add(1);
             self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = v;
-            
-            // println!("Happened");
         }
     }
 
@@ -156,6 +156,8 @@ impl GPU {
 
         let mut x_pos: u8 = 0;
         let mut y_pos: u8 = 0;
+
+        // panic!("{}", current_scanline);
 
         if lcd_control & (1 << 5) == 1 {
             if window_y <= current_scanline {

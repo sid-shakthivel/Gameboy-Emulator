@@ -103,7 +103,7 @@ impl CPU {
             }
             0x03 => {
                 self.registers.set_bc(self.registers.bc().wrapping_add(1));
-                1
+                2
             }
             0x04 => {
                 self.registers.b = self.alu_inc(self.registers.b);
@@ -306,7 +306,7 @@ impl CPU {
                 // test
                 let carry: u8 = self.registers.get_bit(Flags::Carry);
                 if carry == 0 {
-                   self.registers.pc = ((self.registers.pc as u32 as i32) + (b as i32)) as u16;
+                    self.registers.pc = ((self.registers.pc as u32 as i32) + (b as i32)) as u16;
                     return 2;
                 } else {
                     return 3;
@@ -1138,7 +1138,9 @@ impl CPU {
             }
             0xFE => {
                 let b: u8 = self.fetch_byte();
-                if self.registers.a == b {
+                let res = self.registers.a.wrapping_sub(b);
+
+                if res == 0 {
                     self.registers.set_bit(Flags::Zero);
                 } else {
                     self.registers.clear_bit(Flags::Zero);
@@ -1146,13 +1148,13 @@ impl CPU {
 
                 self.registers.set_bit(Flags::Subtract);
 
-                if (b & 0x0f) > (self.registers.a & 0x0f) {
+                if (self.registers.a & 0x0F) < (b & 0x0F) { 
                     self.registers.set_bit(Flags::HalfCarry);
                 } else {
                     self.registers.clear_bit(Flags::HalfCarry);
                 }
 
-                if b > self.registers.a {
+                if (self.registers.a as u16) < (b as u16){
                     self.registers.set_bit(Flags::Carry);
                 } else {
                     self.registers.clear_bit(Flags::Carry);
@@ -1164,7 +1166,9 @@ impl CPU {
                 self.rst_7();
                 4
             }
-            _ => 1,
+            _ => {
+                panic!("OH NO");
+            },
         }
     }
 

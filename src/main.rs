@@ -69,8 +69,8 @@ fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, timer: RefCell<Timer>, mut wi
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
     const MAXCYCLES: u32 = 69905;
     let mut cycles_elapsed: u32 = 0;
-    
     let mut total_cycles = 0;
+
     while window.is_open() && !window.is_key_down(Key::Escape) {
         while cycles_elapsed < MAXCYCLES {
             let opcode = cpu.borrow_mut().fetch_special_opcode();
