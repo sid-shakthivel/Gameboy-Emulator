@@ -84,9 +84,7 @@ fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, timer: RefCell<Timer>, mut wi
             cpu.borrow_mut().do_interrupts();
         }
 
-        // panic!("DONE");
-
-        // gpu.borrow_mut().output_thing();
+        // gpu.borrow_mut().output_thing(0x8410);
         for (i, pixel) in gpu.borrow().screen_data.iter().enumerate() {
             buffer[i] = *pixel;
         }

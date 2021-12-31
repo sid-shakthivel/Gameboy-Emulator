@@ -6,7 +6,7 @@ use std::rc::Rc;
 // Write interrupt call
 
 pub struct GPU {
-    scanline_counter: u16,
+    scanline_counter: i32,
     mmu: Rc<RefCell<MMU>>,
     cpu: Rc<RefCell<CPU>>,
     pub screen_data: [u32; 23040],
@@ -15,7 +15,7 @@ pub struct GPU {
 impl GPU {
     pub fn new(mmu: Rc<RefCell<MMU>>, cpu: Rc<RefCell<CPU>>) -> Self {
         Self {
-            scanline_counter: 0,
+            scanline_counter: 456,
             mmu: mmu,
             cpu: cpu,
             screen_data: [0; 23040],
@@ -26,31 +26,35 @@ impl GPU {
         self.set_lcd_status();
 
         if self.is_lcd_enabled() == 0x80 {
-            self.scanline_counter += cycles;
+            // self.scanline_counter += cycles;
+            self.scanline_counter -= (cycles as i32);
         } else {
             println!("LCD not enabled?");
             return;
         }
 
-        if self.scanline_counter >= 456 {
-            self.scanline_counter = 0;
+        if self.scanline_counter <= 0 {
+            self.scanline_counter = 456;
+
+            let v = self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00].wrapping_add(1);
+            self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = v;
 
             let current_scanline: u8 = self.mmu.borrow().rb(0xFF44);
 
             if current_scanline == 144 {
                 // V-Blank Interrupt
                 self.cpu.borrow_mut().request_interrupt(0);
-            } else if current_scanline > 153 {
+            } else if current_scanline > 152 {
                 // Reset Scanline
                 self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = 0;
-                return;
+                self.draw_scanline();
             } else if current_scanline < 144 {
                 // Draw scanline
                 self.draw_scanline();
-            }
+            } 
 
-            let v = self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00].wrapping_add(1);
-            self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = v;
+            // let v = self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00].wrapping_add(1);
+            // self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = v;
         }
     }
 
@@ -157,8 +161,6 @@ impl GPU {
         let mut x_pos: u8 = 0;
         let mut y_pos: u8 = 0;
 
-        // panic!("{}", current_scanline);
-
         if lcd_control & (1 << 5) == 1 {
             if window_y <= current_scanline {
                 is_window = true;
@@ -197,7 +199,7 @@ impl GPU {
             y_pos = current_scanline + scroll_y;
         }
 
-        // println!("{:#X}", y_pos);
+        // println!("Y-POS: {:#X} Y-OFFSET: {:#X}", y_pos, scroll_y);
         let tile_row: u16 = (((y_pos / 8) as u16) * 32) as u16;
 
         // 160 vertical pixels and 20 tiles
@@ -284,6 +286,7 @@ impl GPU {
 
         // 8 Words
         let mut i: u16 = 0;
+        let y_offset = 20;
 
         while i < 16 {
             let data1 = self.mmu.borrow().rb(tile_data_address + i);
@@ -310,7 +313,7 @@ impl GPU {
                 res = res << 8 | (rgb.0 as u32);
                 res = res << 8 | (rgb.1 as u32);
                 res = res << 8 | (rgb.2 as u32);
-                let index: usize = ((i / 2) as usize * 160) + (j as usize);
+                let index: usize = ((i / 2 + y_offset) as usize * 160) + (j as usize);
                 println!("{}", index);
                 self.screen_data[index] = res;
             }
