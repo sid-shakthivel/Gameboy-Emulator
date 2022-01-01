@@ -6,7 +6,7 @@ use std::rc::Rc;
 // Write interrupt call
 
 pub struct GPU {
-    scanline_counter: i32,
+    scanline_counter: u32,
     mmu: Rc<RefCell<MMU>>,
     cpu: Rc<RefCell<CPU>>,
     pub screen_data: [u32; 23040],
@@ -15,7 +15,7 @@ pub struct GPU {
 impl GPU {
     pub fn new(mmu: Rc<RefCell<MMU>>, cpu: Rc<RefCell<CPU>>) -> Self {
         Self {
-            scanline_counter: 456,
+            scanline_counter: 0,
             mmu: mmu,
             cpu: cpu,
             screen_data: [0; 23040],
@@ -26,35 +26,38 @@ impl GPU {
         self.set_lcd_status();
 
         if self.is_lcd_enabled() == 0x80 {
-            // self.scanline_counter += cycles;
-            self.scanline_counter -= (cycles as i32);
+            self.scanline_counter += cycles as u32;
+            // self.scanline_counter -= (cycles as i32);
         } else {
             println!("LCD not enabled?");
             return;
         }
 
-        if self.scanline_counter <= 0 {
-            self.scanline_counter = 456;
+        if self.scanline_counter >= 456 {
+            let previous_scanline: u8 = self.mmu.borrow().rb(0xFF44);
+
+            if previous_scanline > 153 {
+                self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = 0;
+                self.draw_scanline();
+            }
 
             let v = self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00].wrapping_add(1);
             self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = v;
-
             let current_scanline: u8 = self.mmu.borrow().rb(0xFF44);
+            self.scanline_counter = 0;
 
             if current_scanline == 144 {
                 // V-Blank Interrupt
                 self.cpu.borrow_mut().request_interrupt(0);
-            } else if current_scanline > 152 {
+            } else if current_scanline > 153 {
                 // Reset Scanline
                 self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = 0;
                 self.draw_scanline();
             } else if current_scanline < 144 {
                 // Draw scanline
                 self.draw_scanline();
-            } 
+            }
 
-            // let v = self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00].wrapping_add(1);
-            // self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = v;
         }
     }
 
@@ -119,7 +122,6 @@ impl GPU {
 
     fn draw_scanline(&mut self) {
         let lcd_control = self.mmu.borrow().rb(0xFF40);
-
         if lcd_control & (1 << 1) == 1 {
             // self.render_sprites();
         }

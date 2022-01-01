@@ -64,8 +64,8 @@ impl CPU {
             let interrupt_request_register: u8 = self.mmu.borrow().rb(0xFF0F); // IF
             let interrupt_enabled_register: u8 = self.mmu.borrow().rb(0xFFFF); // IE
             for i in 0..5 {
-                if interrupt_request_register & (1 << i) == 1
-                    && interrupt_enabled_register & (1 << i) == 1
+                if interrupt_request_register & (1 << i) > 0 
+                    && interrupt_enabled_register & (1 << i) > 0
                 {
                     self.service_interrupt(i);
                 }
@@ -79,7 +79,10 @@ impl CPU {
         self.mmu.borrow_mut().wb(0xFF0F, interupt_request_register);
         self.stack_push(self.registers.pc);
         self.registers.pc = match index {
-            0x00 => 0x40,
+            0x00 => {
+                panic!("Servicing V-Blank");
+                0x40
+            },
             0x01 => 0x48,
             0x02 => 0x50,
             0x04 => 0x60,
