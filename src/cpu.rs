@@ -74,6 +74,7 @@ impl CPU {
     }
 
     pub fn service_interrupt(&mut self, index: u8) {
+        panic!("Servicing Interrupt");
         self.interrupt_master = false;
         let interupt_request_register: u8 = self.mmu.borrow().rb(0xFF0F) & !(1 << index); // IF
         self.mmu.borrow_mut().wb(0xFF0F, interupt_request_register);
@@ -626,7 +627,7 @@ impl CPU {
                 self.mmu
                     .borrow_mut()
                     .wb(self.registers.hl(), self.registers.a);
-                1
+                2
             }
             0x78 => {
                 self.registers.a = self.registers.b;

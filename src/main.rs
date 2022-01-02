@@ -26,6 +26,7 @@ fn main() {
     let mut file: File = File::open("ROMS/cpu_instrs/individual/05-op rp.gb").unwrap();
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/04-op r,imm.gb").unwrap();
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/06-ld r,r.gb").unwrap();
+    // let mut file: File = File::open("ROMS/cpu_instrs/individual/01-special.gb").unwrap();
     // let mut file: File = File::open("ROMS/Tetris_1").unwrap();
     file.read_to_end(&mut file_content).unwrap();
     let mmu: Rc<RefCell<MMU>> = Rc::new(RefCell::new(MMU::new(file_content)));
@@ -67,24 +68,23 @@ fn main() {
 
 fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, timer: RefCell<Timer>, mut window: Window) {
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
-    const MAXCYCLES: u32 = 69905;
+    const MAXCYCLES: u32 = 70221;
     let mut cycles_elapsed: u32 = 0;
     let mut total_cycles = 0;
-
+    let mut cycles: u16 = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
         while cycles_elapsed < MAXCYCLES {
             let opcode = cpu.borrow_mut().fetch_special_opcode();
             let flags = cpu.borrow_mut().registers.compose_flags();
-            println!("A: {:#X} F: {} BC: {:#X} DE: {:#X} HL: {:#X} SP: {:#X} PC: {:#X} Opcode: {:#X} 0xFF44: {:#X} CY: {}", cpu.borrow().registers.a, flags, cpu.borrow().registers.bc(), cpu.borrow().registers.de(), cpu.borrow().registers.hl(), cpu.borrow().registers.sp, cpu.borrow().registers.pc - 1, opcode, cpu.borrow().mmu.borrow().rb(0xFF44), total_cycles);
-            let cycles: u16 = (cpu.borrow_mut().execute(opcode) as u16) * 4;
+            cycles = (cpu.borrow_mut().execute(opcode) as u16) * 4;
             cycles_elapsed += cycles as u32;
             total_cycles += cycles as u32;
             timer.borrow_mut().update_timers(cycles);
             gpu.borrow_mut().update_graphics(cycles);
             cpu.borrow_mut().do_interrupts();
+            println!("A: {:#X} F: {} BC: {:#X} DE: {:#X} HL: {:#X} SP: {:#X} PC: {:#X} Opcode: {:#X} 0xFF44: {:#X} CY: {}", cpu.borrow().registers.a, flags, cpu.borrow().registers.bc(), cpu.borrow().registers.de(), cpu.borrow().registers.hl(), cpu.borrow().registers.sp, cpu.borrow().registers.pc - 1, opcode, cpu.borrow().mmu.borrow().rb(0xFF44), total_cycles);
         }
 
-        // gpu.borrow_mut().output_thing(0x8410);
         for (i, pixel) in gpu.borrow().screen_data.iter().enumerate() {
             buffer[i] = *pixel;
         }

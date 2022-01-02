@@ -6,10 +6,20 @@ use std::rc::Rc;
 // Write interrupt call
 
 pub struct GPU {
-    scanline_counter: u32,
+    scanline_counter: u16,
     mmu: Rc<RefCell<MMU>>,
     cpu: Rc<RefCell<CPU>>,
     pub screen_data: [u32; 23040],
+    mode: Mode,
+    ly: u8,
+}
+
+enum Mode {
+    OAM,
+    VRAM,
+    HBlank,
+    VBlank,
+    None,
 }
 
 impl GPU {
@@ -19,6 +29,8 @@ impl GPU {
             mmu: mmu,
             cpu: cpu,
             screen_data: [0; 23040],
+            mode: Mode::OAM,
+            ly: 0,
         }
     }
 
@@ -26,25 +38,18 @@ impl GPU {
         self.set_lcd_status();
 
         if self.is_lcd_enabled() == 0x80 {
-            self.scanline_counter += cycles as u32;
-            // self.scanline_counter -= (cycles as i32);
+            self.scanline_counter += cycles;
         } else {
             println!("LCD not enabled?");
             return;
         }
 
         if self.scanline_counter >= 456 {
-            let previous_scanline: u8 = self.mmu.borrow().rb(0xFF44);
-
-            if previous_scanline > 153 {
-                self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = 0;
-                self.draw_scanline();
-            }
-
-            let v = self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00].wrapping_add(1);
+            let v = self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] + 1;
             self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = v;
+
             let current_scanline: u8 = self.mmu.borrow().rb(0xFF44);
-            self.scanline_counter = 0;
+            self.scanline_counter -= 456;
 
             if current_scanline == 144 {
                 // V-Blank Interrupt
@@ -57,7 +62,6 @@ impl GPU {
                 // Draw scanline
                 self.draw_scanline();
             }
-
         }
     }
 
@@ -113,7 +117,6 @@ impl GPU {
         {
             self.cpu.borrow_mut().request_interrupt(1);
         }
-
     }
 
     fn is_lcd_enabled(&self) -> u8 {
