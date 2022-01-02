@@ -20,7 +20,7 @@ impl MMU {
             interrupt_enabled_register: 0,
         };
 
-        let mut i: usize = 0;
+        // let mut i: usize = 0;
         // for byte in mmu.high_ram {
             // mmu.high_ram[i] = 0xFF;
             // i += 1;
@@ -97,7 +97,10 @@ impl MMU {
             0xE000..=0xFDFF => self.working_ram[(address - 0xE000) as usize] = value,
             0xFE00..=0xFE9F => (), // Graphics - Sprite
             0xFF01 => {
-                println!("{}", value);
+                panic!("{}", value);
+            }
+            0xFF02 => {
+                panic!("{}", value);
             }
             0xFF04 => self.io_ram[0xFF04 - 0xFF00] = 0,
             0xFF44 => self.io_ram[0xFF44 - 0xFF00] = 0,

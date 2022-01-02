@@ -37,7 +37,7 @@ impl GPU {
     pub fn update_graphics(&mut self, cycles: u16) {
         self.set_lcd_status();
 
-        if self.is_lcd_enabled() == 0x80 {
+        if self.is_lcd_enabled() > 0 {
             self.scanline_counter += cycles;
         } else {
             println!("LCD not enabled?");
@@ -45,23 +45,20 @@ impl GPU {
         }
 
         if self.scanline_counter >= 456 {
+            self.scanline_counter -= 456;
             let v = self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] + 1;
-            self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = v;
+            self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = v % 154;
 
             let current_scanline: u8 = self.mmu.borrow().rb(0xFF44);
-            self.scanline_counter -= 456;
 
             if current_scanline == 144 {
                 // V-Blank Interrupt
                 self.cpu.borrow_mut().request_interrupt(0);
-            } else if current_scanline > 153 {
-                // Reset Scanline
-                self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = 0;
-                self.draw_scanline();
-            } else if current_scanline < 144 {
-                // Draw scanline
-                self.draw_scanline();
             }
+            // if current_scanline < 144 {
+                // // Draw scanline
+                // self.draw_scanline();
+            // }
         }
     }
 
@@ -99,6 +96,7 @@ impl GPU {
             new_mode = 0;
             self.mmu.borrow_mut().wb(0xFF41, status & 252);
             check_bit = status & (1 << 5);
+            self.draw_scanline();
         }
 
         if new_mode != current_mode && check_bit > 0 {

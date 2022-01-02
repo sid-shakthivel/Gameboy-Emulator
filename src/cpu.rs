@@ -64,7 +64,7 @@ impl CPU {
             let interrupt_request_register: u8 = self.mmu.borrow().rb(0xFF0F); // IF
             let interrupt_enabled_register: u8 = self.mmu.borrow().rb(0xFFFF); // IE
             for i in 0..5 {
-                if interrupt_request_register & (1 << i) > 0 
+                if interrupt_request_register & (1 << i) > 0
                     && interrupt_enabled_register & (1 << i) > 0
                 {
                     self.service_interrupt(i);
@@ -83,7 +83,7 @@ impl CPU {
             0x00 => {
                 panic!("Servicing V-Blank");
                 0x40
-            },
+            }
             0x01 => 0x48,
             0x02 => 0x50,
             0x04 => 0x60,
@@ -132,7 +132,7 @@ impl CPU {
                 5
             }
             0x09 => {
-                self.alu_add16(self.registers.b as u16);
+                self.alu_add16(self.registers.bc());
                 2
             }
             0x0A => {
@@ -163,7 +163,7 @@ impl CPU {
             0x10 => {
                 //
                 // while true {}
-                // panic!("Unknown Instruction: STOP");
+                panic!("Unknown Instruction: STOP");
                 1
             }
             0x11 => {
@@ -1092,7 +1092,6 @@ impl CPU {
             0xF0 => {
                 let v: u16 = 0xFF00 | self.fetch_byte() as u16;
                 self.registers.a = self.mmu.borrow().rb(v);
-                // panic!("STOP {:#X}", self.mmu.borrow().rb(v));
                 3
             }
             0xF1 => {
@@ -1152,13 +1151,13 @@ impl CPU {
 
                 self.registers.set_bit(Flags::Subtract);
 
-                if (self.registers.a & 0x0F) < (b & 0x0F) { 
+                if (self.registers.a & 0x0F) < (b & 0x0F) {
                     self.registers.set_bit(Flags::HalfCarry);
                 } else {
                     self.registers.clear_bit(Flags::HalfCarry);
                 }
 
-                if (self.registers.a as u16) < (b as u16){
+                if (self.registers.a as u16) < (b as u16) {
                     self.registers.set_bit(Flags::Carry);
                 } else {
                     self.registers.clear_bit(Flags::Carry);
@@ -1172,7 +1171,7 @@ impl CPU {
             }
             _ => {
                 panic!("OH NO");
-            },
+            }
         }
     }
 
@@ -2434,7 +2433,11 @@ impl CPU {
     fn alu_sbc(&mut self, register_b: u8) {
         let carry = self.registers.get_bit(Flags::Carry);
         // let temp = self.registers.a - (register_b + carry);
-        let temp = self.registers.a.wrapping_sub(register_b).wrapping_sub(carry);
+        let temp = self
+            .registers
+            .a
+            .wrapping_sub(register_b)
+            .wrapping_sub(carry);
         self.cpu_zero_check(temp);
         self.registers.set_bit(Flags::Subtract);
         self.cpu_half_carry_check(temp);

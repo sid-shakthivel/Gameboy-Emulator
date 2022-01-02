@@ -57,13 +57,13 @@ fn main() {
 // pc is incremented in fetch_byte() so to get actual value, -1
 
 // fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, timer: RefCell<Timer>, mut window: Window) {
-//     let mut cycles_elapsed: u32 = 0;
-//     while cycles_elapsed <= 559240 {
-//         let opcode = cpu.borrow_mut().fetch_special_opcode();
-//         println!("A: {:#X} F: {:#X} B: {:#X} C: {:#X} D: {:#X} E: {:#X} H: {:#X} L: {:#X} SP: {:#X} PC: {:#X} {:#X}", cpu.borrow().registers.a, cpu.borrow().registers.f, cpu.borrow().registers.b, cpu.borrow().registers.c, cpu.borrow().registers.d, cpu.borrow().registers.e, cpu.borrow().registers.h, cpu.borrow().registers.l, cpu.borrow().registers.sp, cpu.borrow().registers.pc - 1, opcode);
-//         let cycles: u16 = cpu.borrow_mut().execute(opcode) as u16;
-//         cycles_elapsed += cycles as u32;
-//     }
+    // let mut cycles_elapsed: u32 = 0;
+    // while cycles_elapsed <= 559240 {
+        // let opcode = cpu.borrow_mut().fetch_special_opcode();
+        // println!("A: {:#X} F: {:#X} B: {:#X} C: {:#X} D: {:#X} E: {:#X} H: {:#X} L: {:#X} SP: {:#X} PC: {:#X} {:#X}", cpu.borrow().registers.a, cpu.borrow().registers.f, cpu.borrow().registers.b, cpu.borrow().registers.c, cpu.borrow().registers.d, cpu.borrow().registers.e, cpu.borrow().registers.h, cpu.borrow().registers.l, cpu.borrow().registers.sp, cpu.borrow().registers.pc - 1, opcode);
+        // let cycles: u16 = cpu.borrow_mut().execute(opcode) as u16;
+        // cycles_elapsed += cycles as u32;
+    // }
 // }
 
 fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, timer: RefCell<Timer>, mut window: Window) {
@@ -76,13 +76,17 @@ fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, timer: RefCell<Timer>, mut wi
         while cycles_elapsed < MAXCYCLES {
             let opcode = cpu.borrow_mut().fetch_special_opcode();
             let flags = cpu.borrow_mut().registers.compose_flags();
+            println!("A: {:#X} F: {} BC: {:#X} DE: {:#X} HL: {:#X} SP: {:#X} PC: {:#X} Opcode: {:#X} 0xFF44: {:#X} CY: {}", cpu.borrow().registers.a, flags, cpu.borrow().registers.bc(), cpu.borrow().registers.de(), cpu.borrow().registers.hl(), cpu.borrow().registers.sp, cpu.borrow().registers.pc - 1, opcode, cpu.borrow().mmu.borrow().rb(0xFF44), total_cycles);
             cycles = (cpu.borrow_mut().execute(opcode) as u16) * 4;
             cycles_elapsed += cycles as u32;
             total_cycles += cycles as u32;
             timer.borrow_mut().update_timers(cycles);
             gpu.borrow_mut().update_graphics(cycles);
             cpu.borrow_mut().do_interrupts();
-            println!("A: {:#X} F: {} BC: {:#X} DE: {:#X} HL: {:#X} SP: {:#X} PC: {:#X} Opcode: {:#X} 0xFF44: {:#X} CY: {}", cpu.borrow().registers.a, flags, cpu.borrow().registers.bc(), cpu.borrow().registers.de(), cpu.borrow().registers.hl(), cpu.borrow().registers.sp, cpu.borrow().registers.pc - 1, opcode, cpu.borrow().mmu.borrow().rb(0xFF44), total_cycles);
+            if opcode == 0xF0 {
+                let v = cpu.borrow().mmu.borrow().rb(0xFF44);
+                cpu.borrow_mut().registers.a = v;             
+            }
         }
 
         for (i, pixel) in gpu.borrow().screen_data.iter().enumerate() {
