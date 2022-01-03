@@ -46,6 +46,13 @@ impl GPU {
             return;
         }
 
+        // if self.mmu.borrow().io_ram[0xFF44 - 0xFF00] == 153 && cycles > 4 {
+            // let v = self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] + 1;
+            // self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = 0;
+            // self.scanline_counter = 0;
+            // return;
+        // }
+
         if self.scanline_counter >= 456 {
             self.scanline_counter -= 456;
             let v = self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] + 1;

@@ -8,6 +8,7 @@ pub struct CPU {
     pub registers: Registers,
     pub mmu: Rc<RefCell<MMU>>,
     pub interrupt_master: bool,
+    pub is_stopped: bool,
 }
 
 impl CPU {
@@ -27,6 +28,7 @@ impl CPU {
             },
             mmu: mmu,
             interrupt_master: true,
+            is_stopped: false,
         };
 
         cpu.registers.set_af(0x01B0);
@@ -161,9 +163,8 @@ impl CPU {
                 1
             }
             0x10 => {
-                //
-                // while true {}
-                panic!("Unknown Instruction: STOP");
+                // Check implementation is correct
+                self.is_stopped = true;
                 1
             }
             0x11 => {
@@ -381,7 +382,10 @@ impl CPU {
                 self.registers.flip_bit(Flags::Carry);
                 1
             }
-            0x40 => 1,
+            0x40 => {
+                self.registers.b = self.registers.b;
+                1
+            },
             0x41 => {
                 self.registers.b = self.registers.c;
                 1
@@ -415,9 +419,8 @@ impl CPU {
                 1
             }
             0x49 => {
-                // ld_c_c
-                panic!("Unknown Instruction");
-                // 1
+                self.registers.c = self.registers.c;
+                1
             }
             0x4A => {
                 self.registers.c = self.registers.d;
@@ -452,9 +455,8 @@ impl CPU {
                 1
             }
             0x52 => {
-                // ld_d_d
-                panic!("Unknown Instruction");
-                // 1
+                self.registers.d = self.registers.d;
+                1
             }
             0x53 => {
                 self.registers.d = self.registers.e;
@@ -525,9 +527,8 @@ impl CPU {
                 1
             }
             0x64 => {
-                // ld_h_h
-                panic!("Unknown Instruction");
-                // 1
+                self.registers.h = self.registers.h;
+                1
             }
             0x65 => {
                 self.registers.h = self.registers.l;
@@ -562,9 +563,8 @@ impl CPU {
                 1
             }
             0x6D => {
-                // ld_l_l
-                panic!("Unknown Instruction");
-                // 1
+                self.registers.l = self.registers.l;
+                1
             }
             0x6E => {
                 self.registers.l = self.mmu.borrow().rb(self.registers.hl());
@@ -650,9 +650,8 @@ impl CPU {
                 2
             }
             0x7F => {
-                // ld_a_a
-                panic!("Unknown Instruction");
-                // 1
+                self.registers.a = self.registers.a;
+                1
             }
             0x80 => {
                 self.alu_add(self.registers.b);
@@ -2517,7 +2516,7 @@ impl CPU {
     }
 
     fn alu_bit(&mut self, a: u8, b: u8) {
-        let res = a & (1 << (b as u32));
+        let res = !(a & (1 << (b as u32)));
         self.registers.change_bit(Flags::Zero, res);
         self.registers.clear_bit(Flags::Subtract);
         self.registers.set_bit(Flags::HalfCarry);
@@ -2706,7 +2705,7 @@ impl CPU {
 
     fn ret_c(&mut self) -> u8 {
         let carry: u8 = self.registers.get_bit(Flags::Carry);
-        if carry == 1 {
+        if carry > 0 {
             self.registers.pc = self.stack_pop();
             return 5;
         }

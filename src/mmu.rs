@@ -97,7 +97,7 @@ impl MMU {
             0xE000..=0xFDFF => self.working_ram[(address - 0xE000) as usize] = value,
             0xFE00..=0xFE9F => (), // Graphics - Sprite
             0xFF01 => {
-                // panic!("{}", value);
+                // println!("{} ", value);
             }
             0xFF02 => {
                 // panic!("{}", value);
