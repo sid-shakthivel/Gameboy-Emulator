@@ -40,7 +40,9 @@ impl GPU {
         if self.is_lcd_enabled() > 0 {
             self.scanline_counter += cycles;
         } else {
-            println!("LCD not enabled?");
+            // println!("LCD not enabled?");
+            self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = 0;
+            self.scanline_counter = 0;
             return;
         }
 
@@ -55,10 +57,28 @@ impl GPU {
                 // V-Blank Interrupt
                 self.cpu.borrow_mut().request_interrupt(0);
             }
-            // if current_scanline < 144 {
-                // // Draw scanline
-                // self.draw_scanline();
-            // }
+        }
+    }
+
+    pub fn quick_update(&mut self, cycles: u16) {
+        for i in 0..cycles {
+            if self.is_lcd_enabled() >= 0 {
+                self.scanline_counter += 1;
+                if self.scanline_counter == 456 {
+                    if self.mmu.borrow().rb(0xFF44) < 144 {
+                        self.draw_scanline();
+                    }
+                    if self.scanline_counter == 143 {
+                        self.cpu.borrow_mut().request_interrupt(0);
+                    }
+                    let v = self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] + 1;
+                    self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = v % 154;
+                    self.scanline_counter = 0;
+                }
+            } else {
+                self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = 0;
+                self.scanline_counter = 0;
+            }
         }
     }
 
@@ -199,7 +219,7 @@ impl GPU {
             y_pos = current_scanline - window_y;
         } else {
             // Must add scanline onto scroll_y as it just gives coordinates of background
-            y_pos = current_scanline + scroll_y;
+            y_pos = current_scanline.wrapping_add(scroll_y);
         }
 
         // println!("Y-POS: {:#X} Y-OFFSET: {:#X}", y_pos, scroll_y);

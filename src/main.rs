@@ -57,13 +57,13 @@ fn main() {
 // pc is incremented in fetch_byte() so to get actual value, -1
 
 // fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, timer: RefCell<Timer>, mut window: Window) {
-    // let mut cycles_elapsed: u32 = 0;
-    // while cycles_elapsed <= 559240 {
-        // let opcode = cpu.borrow_mut().fetch_special_opcode();
-        // println!("A: {:#X} F: {:#X} B: {:#X} C: {:#X} D: {:#X} E: {:#X} H: {:#X} L: {:#X} SP: {:#X} PC: {:#X} {:#X}", cpu.borrow().registers.a, cpu.borrow().registers.f, cpu.borrow().registers.b, cpu.borrow().registers.c, cpu.borrow().registers.d, cpu.borrow().registers.e, cpu.borrow().registers.h, cpu.borrow().registers.l, cpu.borrow().registers.sp, cpu.borrow().registers.pc - 1, opcode);
-        // let cycles: u16 = cpu.borrow_mut().execute(opcode) as u16;
-        // cycles_elapsed += cycles as u32;
-    // }
+// let mut cycles_elapsed: u32 = 0;
+// while cycles_elapsed <= 559240 {
+// let opcode = cpu.borrow_mut().fetch_special_opcode();
+// println!("A: {:#X} F: {:#X} B: {:#X} C: {:#X} D: {:#X} E: {:#X} H: {:#X} L: {:#X} SP: {:#X} PC: {:#X} {:#X}", cpu.borrow().registers.a, cpu.borrow().registers.f, cpu.borrow().registers.b, cpu.borrow().registers.c, cpu.borrow().registers.d, cpu.borrow().registers.e, cpu.borrow().registers.h, cpu.borrow().registers.l, cpu.borrow().registers.sp, cpu.borrow().registers.pc - 1, opcode);
+// let cycles: u16 = cpu.borrow_mut().execute(opcode) as u16;
+// cycles_elapsed += cycles as u32;
+// }
 // }
 
 fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, timer: RefCell<Timer>, mut window: Window) {
@@ -85,7 +85,7 @@ fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, timer: RefCell<Timer>, mut wi
             cpu.borrow_mut().do_interrupts();
             if opcode == 0xF0 {
                 let v = cpu.borrow().mmu.borrow().rb(0xFF44);
-                cpu.borrow_mut().registers.a = v;             
+                // cpu.borrow_mut().registers.a = v;
             }
         }
 
