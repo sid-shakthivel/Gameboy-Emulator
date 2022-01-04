@@ -39,15 +39,15 @@ impl CPU {
         cpu
     }
 
-    fn fetch_byte(&mut self) -> u8 {
+    pub fn fetch_byte(&mut self) -> u8 {
         let b = self.mmu.borrow().rb(self.registers.pc);
         // print!(" Byte: {:#X}", b);
         self.registers.pc += 1;
         b
     }
 
-    pub fn fetch_special_opcode(&mut self) -> u8 {
-        let b = self.mmu.borrow().rb(self.registers.pc);
+    fn fetch_signed_byte(&mut self) -> i8 {
+        let b: i8 = self.mmu.borrow().rb(self.registers.pc) as i8;
         self.registers.pc += 1;
         b
     }
@@ -200,8 +200,9 @@ impl CPU {
                 1
             }
             0x18 => {
-                let b: u8 = self.fetch_byte();
-                self.cpu_jr_s8(b);
+                // let b: u8 = self.fetch_byte();
+                let b: i8 = self.fetch_signed_byte();
+                self.registers.pc = ((self.registers.pc as u32 as i32) + (b as i32)) as u16;
                 3
             }
             0x19 => {
@@ -2289,7 +2290,7 @@ impl CPU {
 
         self.registers.clear_bit(Flags::Subtract);
 
-        if (v & 0xfff) + (self.registers.hl() & 0xfff) > 0xfff {
+        if (v & 0x07FF) + (self.registers.hl() & 0x07FF) > 0x07FF {
             self.registers.set_bit(Flags::HalfCarry);
         } else {
             self.registers.clear_bit(Flags::HalfCarry);
