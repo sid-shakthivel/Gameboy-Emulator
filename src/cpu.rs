@@ -41,6 +41,13 @@ impl CPU {
 
     pub fn fetch_byte(&mut self) -> u8 {
         let b = self.mmu.borrow().rb(self.registers.pc);
+        print!(" Byte: {:#X}", b);
+        self.registers.pc += 1;
+        b
+    }
+
+    pub fn fetch_opcode(&mut self) -> u8 {
+        let b = self.mmu.borrow().rb(self.registers.pc);
         // print!(" Byte: {:#X}", b);
         self.registers.pc += 1;
         b
@@ -105,7 +112,7 @@ impl CPU {
                 self.mmu
                     .borrow_mut()
                     .wb(self.registers.bc(), self.registers.a);
-                1
+                2
             }
             0x03 => {
                 self.registers.set_bc(self.registers.bc().wrapping_add(1));
@@ -138,7 +145,7 @@ impl CPU {
                 2
             }
             0x0A => {
-                self.registers.a = self.registers.bc() as u8;
+                self.registers.a = self.mmu.borrow().rb(self.registers.bc());
                 2
             }
             0x0B => {
@@ -267,10 +274,9 @@ impl CPU {
                 2
             }
             0x27 => {
-                // da_a
-                panic!("Unknown Instruction");
-                // 1
-            } // da_a
+                self.alu_daa();
+                1
+            } 
             0x28 => {
                 let b: i8 = self.fetch_byte() as i8;
                 self.cpu_jr_z_s8(b)
@@ -332,11 +338,14 @@ impl CPU {
                 2
             }
             0x34 => {
-                let res: u8 = self.mmu.borrow().rb(self.registers.hl()).wrapping_add(1);
+                let num: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let res: u8 = self.alu_inc(num);
+                self.mmu.borrow_mut().wb(self.registers.hl(), res);
                 3
             }
             0x35 => {
-                let res: u8 = self.mmu.borrow().rb(self.registers.hl()).wrapping_sub(1);
+                let num: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let res: u8 = self.alu_dec(num);
                 self.mmu.borrow_mut().wb(self.registers.hl(), res);
                 3
             }
@@ -386,7 +395,7 @@ impl CPU {
             0x40 => {
                 self.registers.b = self.registers.b;
                 1
-            },
+            }
             0x41 => {
                 self.registers.b = self.registers.c;
                 1
@@ -1599,7 +1608,7 @@ impl CPU {
                 self.alu_bit(self.registers.l, 4);
                 2
             }
-            066 => {
+            0x66 => {
                 let v: u8 = self.mmu.borrow().rb(self.registers.hl());
                 self.alu_bit(v, 4);
                 3
@@ -2319,9 +2328,15 @@ impl CPU {
     }
 
     fn alu_rrc(&mut self, mut v: u8) -> u8 {
-        let carry: u8 = v << 7;
+        let carry = v & 0x01;
         v = v >> 1;
-        self.registers.change_bit(Flags::Carry, carry);
+
+        if carry == 0x01 {
+            self.registers.set_bit(Flags::Carry);
+        } else {
+            self.registers.clear_bit(Flags::Carry);
+        }
+
         v = (v & (!(1 << 7))) | (carry << 7);
 
         self.cpu_zero_check(v);
@@ -2331,11 +2346,25 @@ impl CPU {
     }
 
     fn alu_rl(&mut self, mut v: u8) -> u8 {
-        let old_carry: u8 = self.registers.get_bit(Flags::Carry);
-        v <<= 1;
-        self.registers
-            .change_bit(Flags::Carry, self.registers.a >> 7);
-        v = (v & (!(1 << 0))) | (old_carry << 0);
+        let new_carry: u8 = v & 0x80;
+        let carry: u8 = self.registers.get_bit(Flags::Carry);
+
+        if carry > 0 { 
+            v = v << 1 | 0x1;
+        } else {
+            v = v << 1;
+        }
+
+        self.cpu_zero_check(v);
+        self.registers.clear_bit(Flags::Subtract);
+        self.registers.clear_bit(Flags::HalfCarry);
+
+        if new_carry > 0 {
+            self.registers.set_bit(Flags::Carry);
+        } else {
+            self.registers.clear_bit(Flags::Carry);
+        }
+
         v
     }
 
@@ -2423,18 +2452,27 @@ impl CPU {
         self.registers.a = temp;
     }
 
-    fn alu_sbc(&mut self, register_b: u8) {
-        let carry = self.registers.get_bit(Flags::Carry);
-        // let temp = self.registers.a - (register_b + carry);
-        let temp = self
-            .registers
-            .a
-            .wrapping_sub(register_b)
-            .wrapping_sub(carry);
+    fn alu_sbc(&mut self, b: u8) {
+        let mut carry = 0;
+        if self.registers.get_bit(Flags::Carry) > 0 {
+            carry = 1;
+        }
+        let temp = self.registers.a.wrapping_sub(b).wrapping_sub(carry);
         self.cpu_zero_check(temp);
         self.registers.set_bit(Flags::Subtract);
-        self.cpu_half_carry_check(temp);
-        self.cpu_carry_check(temp, register_b);
+
+        if (self.registers.a & 0x0F) < (b & 0x0F) + carry {
+            self.registers.set_bit(Flags::HalfCarry);
+        } else {
+            self.registers.clear_bit(Flags::HalfCarry);
+        }
+
+        if (self.registers.a as u16) < (b as u16) + (carry as u16) {
+            self.registers.set_bit(Flags::Carry);
+        } else {
+            self.registers.clear_bit(Flags::Carry);
+        }
+
         self.registers.a = temp;
     }
 
@@ -2465,32 +2503,58 @@ impl CPU {
         self.registers.a = temp;
     }
 
-    fn alu_cp(&mut self, register_b: u8) {
-        let temp = self.registers.a.wrapping_sub(register_b);
-        if temp == self.registers.a {
+    fn alu_cp(&mut self, b: u8) {
+        let temp = self.registers.a.wrapping_sub(b);
+        if temp == 0 {
             self.registers.set_bit(Flags::Zero);
         } else {
             self.registers.clear_bit(Flags::Zero);
         }
         self.registers.set_bit(Flags::Subtract);
-        self.cpu_half_carry_check(temp);
-        self.cpu_carry_check(temp, register_b);
+
+        if (self.registers.a & 0xf) < (b & 0xf) {
+            self.registers.set_bit(Flags::HalfCarry);
+        } else {
+            self.registers.clear_bit(Flags::HalfCarry);
+        }
+
+        if (self.registers.a as u16) < (b as u16) {
+            self.registers.set_bit(Flags::Carry);
+        } else {
+            self.registers.clear_bit(Flags::Carry);
+        }
     }
 
     fn alu_sla(&mut self, mut v: u8) -> u8 {
-        let carry = v & (1 << 7);
-        self.registers.change_bit(Flags::Carry, carry);
-        v >>= 1;
+        // let carry = v & (1 << 7);
+        // self.registers.change_bit(Flags::Carry, carry);
+        // v >>= 1;
+        // self.cpu_zero_check(v);
+        // self.registers.clear_bit(Flags::Subtract);
+        // self.registers.clear_bit(Flags::HalfCarry);
+        // v
+
+        let new_carry: u8 = v & 0x80;
+        v = (v << 1) & !(1 << 0);
         self.cpu_zero_check(v);
         self.registers.clear_bit(Flags::Subtract);
         self.registers.clear_bit(Flags::HalfCarry);
+        if new_carry > 0 {
+            self.registers.set_bit(Flags::Carry);
+        } else {
+            self.registers.clear_bit(Flags::Carry);
+        }
         v
     }
 
     fn alu_sra(&mut self, mut v: u8) -> u8 {
         let carry = v & (1 << 0);
         self.registers.change_bit(Flags::Carry, carry);
-        v = (v << 1) | v;
+        if (v >> 7) > 0 {
+            v = (v >> 1) | 0x80;
+        } else {
+            v = v >> 1;
+        }
         self.cpu_zero_check(v);
         self.registers.clear_bit(Flags::Subtract);
         self.registers.clear_bit(Flags::HalfCarry);
@@ -2517,28 +2581,54 @@ impl CPU {
     }
 
     fn alu_bit(&mut self, a: u8, b: u8) {
-        let res = !(a & (1 << (b as u32)));
-        self.registers.change_bit(Flags::Zero, res);
+        let res: bool = a & (1 << (b as u32)) == 0;
+        if res {
+            self.registers.set_bit(Flags::Zero);
+        } else {
+            self.registers.clear_bit(Flags::Zero);
+        }
         self.registers.clear_bit(Flags::Subtract);
         self.registers.set_bit(Flags::HalfCarry);
     }
 
     fn alu_res(&mut self, mut a: u8, b: u8) -> u8 {
         a &= !(1 << b);
-        self.registers.clear_bit(Flags::Zero);
-        self.registers.clear_bit(Flags::Subtract);
-        self.registers.clear_bit(Flags::HalfCarry);
-        self.registers.clear_bit(Flags::Carry);
         a
     }
 
     fn alu_set(&mut self, mut a: u8, mut b: u8) -> u8 {
         a |= 1 << b;
-        self.registers.clear_bit(Flags::Zero);
-        self.registers.clear_bit(Flags::Subtract);
-        self.registers.clear_bit(Flags::HalfCarry);
-        self.registers.clear_bit(Flags::Carry);
         a
+    }
+
+    fn alu_daa(&mut self) {
+        let subtract = self.registers.get_bit(Flags::Subtract);
+        let half_carry = self.registers.get_bit(Flags::HalfCarry);
+        let carry = self.registers.get_bit(Flags::Carry);
+        let mut a = self.registers.a;
+        let mut adjustment = 0;
+
+        if carry > 0 {
+            adjustment = 0x60;
+        }
+        if half_carry > 0 {
+            adjustment |= 0x06;
+        }
+
+        if subtract > 0 {
+            a.wrapping_sub(adjustment);
+        } else {
+            a.wrapping_add(adjustment);
+        }
+
+        self.cpu_zero_check(a);
+        self.registers.clear_bit(Flags::HalfCarry); 
+        if a > 0x99 {
+            self.registers.set_bit(Flags::Carry);
+        } else {
+            self.registers.set_bit(Flags::Carry);
+        }
+        self.registers.a = a;
     }
 
     fn cpu_jr_s8(&mut self, s8: u8) {

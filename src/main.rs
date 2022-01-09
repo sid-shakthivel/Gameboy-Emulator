@@ -24,17 +24,17 @@ const HEIGHT: usize = 144;
 fn main() {
     let mut file_content: Vec<u8> = Vec::new();
     //Passed
-    let mut file: File = File::open("ROMS/cpu_instrs/individual/05-op rp.gb").unwrap();
+    // let mut file: File = File::open("ROMS/cpu_instrs/individual/05-op rp.gb").unwrap();
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/06-ld r,r.gb").unwrap();
+    // let mut file: File = File::open("ROMS/cpu_instrs/individual/04-op r,imm.gb").unwrap();
 
     // Failed
-    // let mut file: File = File::open("ROMS/cpu_instrs/individual/04-op r,imm.gb").unwrap();
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/01-special.gb").unwrap();
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb").unwrap();
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/08-misc instrs.gb").unwrap();
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/09-op r,r.gb").unwrap();
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/10-bit ops.gb").unwrap();
-    // let mut file: File = File::open("ROMS/cpu_instrs/individual/11-op a,(hl).gb").unwrap();
+    let mut file: File = File::open("ROMS/cpu_instrs/individual/11-op a,(hl).gb").unwrap();
 
     file.read_to_end(&mut file_content).unwrap();
     let mmu: Rc<RefCell<MMU>> = Rc::new(RefCell::new(MMU::new(file_content)));
@@ -72,15 +72,15 @@ fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, timer: RefCell<Timer>, mut wi
     while window.is_open() && !window.is_key_down(Key::Escape) {
         while cycles_elapsed < MAXCYCLES {
             if cpu.borrow().is_stopped == false {
-                let opcode = cpu.borrow_mut().fetch_byte();
-                let flags = cpu.borrow_mut().registers.compose_flags();
-                println!("A: {:#X} F: {:#X} BC: {:#X} DE: {:#X} HL: {:#X} SP: {:#X} PC: {:#X} CY: {:#X} Opcode: {:#X}", cpu.borrow().registers.a, cpu.borrow().registers.f, cpu.borrow().registers.bc(), cpu.borrow().registers.de(), cpu.borrow().registers.hl(), cpu.borrow().registers.sp, cpu.borrow().registers.pc - 1, total_cycles, opcode);
+                let opcode = cpu.borrow_mut().fetch_opcode();
+                print!("A: {:#X} F: {:#X} BC: {:#X} DE: {:#X} HL: {:#X} SP: {:#X} PC: {:#X} CY: {:#X} Opcode: {:#X} 0xDEF6: {:#X}", cpu.borrow().registers.a, cpu.borrow().registers.f, cpu.borrow().registers.bc(), cpu.borrow().registers.de(), cpu.borrow().registers.hl(), cpu.borrow().registers.sp, cpu.borrow().registers.pc - 1, total_cycles, opcode, cpu.borrow().mmu.borrow().rb(0xDEF6)); 
                 cycles = (cpu.borrow_mut().execute(opcode) as u16) * 4;
                 cycles_elapsed += cycles as u32;
                 total_cycles += cycles as u32;
                 timer.borrow_mut().update_timers(cycles);
                 gpu.borrow_mut().update_graphics(cycles);
                 cpu.borrow_mut().do_interrupts();
+                println!("")
             }
         }
 
