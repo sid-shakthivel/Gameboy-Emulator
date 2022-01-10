@@ -29,12 +29,12 @@ fn main() {
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/04-op r,imm.gb").unwrap();
 
     // Failed
-    // let mut file: File = File::open("ROMS/cpu_instrs/individual/01-special.gb").unwrap();
+    let mut file: File = File::open("ROMS/cpu_instrs/individual/01-special.gb").unwrap();
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb").unwrap();
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/08-misc instrs.gb").unwrap();
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/09-op r,r.gb").unwrap();
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/10-bit ops.gb").unwrap();
-    let mut file: File = File::open("ROMS/cpu_instrs/individual/11-op a,(hl).gb").unwrap();
+    // let mut file: File = File::open("ROMS/cpu_instrs/individual/11-op a,(hl).gb").unwrap();
 
     file.read_to_end(&mut file_content).unwrap();
     let mmu: Rc<RefCell<MMU>> = Rc::new(RefCell::new(MMU::new(file_content)));

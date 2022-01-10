@@ -2616,17 +2616,23 @@ impl CPU {
         }
 
         if subtract > 0 {
-            a.wrapping_sub(adjustment);
+            a = a.wrapping_sub(adjustment);
         } else {
-            a.wrapping_add(adjustment);
+            if a & 0x0F > 0x09 { 
+                adjustment |= 0x06; 
+            }
+            if a > 0x99 { 
+                adjustment |= 0x60; 
+            }
+            a = a.wrapping_add(adjustment);
         }
 
         self.cpu_zero_check(a);
-        self.registers.clear_bit(Flags::HalfCarry); 
-        if a > 0x99 {
+        self.registers.clear_bit(Flags::HalfCarry);
+        if adjustment >= 0x60 {
             self.registers.set_bit(Flags::Carry);
         } else {
-            self.registers.set_bit(Flags::Carry);
+            self.registers.clear_bit(Flags::Carry);
         }
         self.registers.a = a;
     }
