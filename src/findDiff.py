@@ -18,6 +18,7 @@ for i in range(0, len(gb_list)):
     for key in rb_list[i]:
         if (key in gb_list[i] and rb_list[i][key] != gb_list[i][key]):
             print("Error on line " + str(i))
+            print(gb_list[i-1])
             print(gb_list[i])
             print(rb_list[i])
             exit()

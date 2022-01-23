@@ -276,7 +276,7 @@ impl CPU {
             0x27 => {
                 self.alu_daa();
                 1
-            } 
+            }
             0x28 => {
                 let b: i8 = self.fetch_byte() as i8;
                 self.cpu_jr_z_s8(b)
@@ -355,6 +355,8 @@ impl CPU {
                 3
             }
             0x37 => {
+                self.registers.clear_bit(Flags::Subtract);
+                self.registers.clear_bit(Flags::HalfCarry);
                 self.registers.set_bit(Flags::Carry);
                 1
             }
@@ -389,7 +391,13 @@ impl CPU {
                 2
             }
             0x3F => {
-                self.registers.flip_bit(Flags::Carry);
+                self.registers.clear_bit(Flags::Subtract);
+                self.registers.clear_bit(Flags::HalfCarry);
+                if self.registers.get_bit(Flags::Carry) > 0 {
+                    self.registers.clear_bit(Flags::Carry);
+                } else {
+                    self.registers.set_bit(Flags::Carry);
+                }
                 1
             }
             0x40 => {
@@ -1231,7 +1239,7 @@ impl CPU {
                 2
             }
             0x0C => {
-                self.registers.h = self.alu_rrc(self.registers.l);
+                self.registers.h = self.alu_rrc(self.registers.h);
                 2
             }
             0x0D => {
@@ -2328,28 +2336,36 @@ impl CPU {
     }
 
     fn alu_rrc(&mut self, mut v: u8) -> u8 {
-        let carry = v & 0x01;
-        v = v >> 1;
+        // let mut res = v >> 1;
+        // let new_carry = v & (1 << 0);
+        // if new_carry > 0 {
+        //     self.registers.set_bit(Flags::Carry);
+        //     res |= 0x80;
+        // }
+        // self.cpu_zero_check(res);
+        // self.registers.clear_bit(Flags::Subtract);
+        // self.registers.clear_bit(Flags::HalfCarry);
+        // res
 
-        if carry == 0x01 {
+        let c = v & 0x01;
+        let r = (v >> 1) | (if c > 0 { 0x80 } else { 0 });
+
+        self.registers.clear_bit(Flags::Subtract);
+        self.registers.clear_bit(Flags::HalfCarry);
+        self.cpu_zero_check(r);
+        if c == 0x01 {
             self.registers.set_bit(Flags::Carry);
         } else {
             self.registers.clear_bit(Flags::Carry);
         }
-
-        v = (v & (!(1 << 7))) | (carry << 7);
-
-        self.cpu_zero_check(v);
-        self.registers.clear_bit(Flags::HalfCarry);
-        self.registers.clear_bit(Flags::Subtract);
-        v
+        return r;
     }
 
     fn alu_rl(&mut self, mut v: u8) -> u8 {
         let new_carry: u8 = v & 0x80;
         let carry: u8 = self.registers.get_bit(Flags::Carry);
 
-        if carry > 0 { 
+        if carry > 0 {
             v = v << 1 | 0x1;
         } else {
             v = v << 1;
@@ -2385,6 +2401,19 @@ impl CPU {
             self.registers.clear_bit(Flags::Carry);
         }
         return r;
+        // let new_carry = v & 0x01;
+        // let mut res = v >> 1;
+        // if new_carry > 0 {
+        // self.registers.set_bit(Flags::Carry);
+        // res |= 0x80;
+        // } else {
+        // self.registers.clear_bit(Flags::Carry);
+        // }
+        //
+        // self.cpu_zero_check(res);
+        // self.registers.clear_bit(Flags::Subtract);
+        // self.registers.clear_bit(Flags::HalfCarry);
+        // res
     }
 
     fn alu_add(&mut self, b: u8) {
@@ -2618,11 +2647,11 @@ impl CPU {
         if subtract > 0 {
             a = a.wrapping_sub(adjustment);
         } else {
-            if a & 0x0F > 0x09 { 
-                adjustment |= 0x06; 
+            if a & 0x0F > 0x09 {
+                adjustment |= 0x06;
             }
-            if a > 0x99 { 
-                adjustment |= 0x60; 
+            if a > 0x99 {
+                adjustment |= 0x60;
             }
             a = a.wrapping_add(adjustment);
         }
