@@ -362,8 +362,7 @@ impl CPU {
             }
             0x38 => {
                 let b: u8 = self.fetch_byte();
-                self.cpu_c_s8(b);
-                2
+                return self.cpu_c_s8(b);
             }
             0x39 => {
                 self.alu_add16(self.registers.sp);
@@ -946,8 +945,10 @@ impl CPU {
                 self.jp_nz_a16(v)
             }
             0xC3 => {
+                // let b1: u8 = self.fetch_byte();
+                // let b2: u8 = self.fetch_byte();
+                // self.jp_a16((b2 as u16) + ((b1 as u16) << 8));
                 let w = self.fetch_word();
-                // println!("W = {:#X}", w);
                 self.jp_a16(w);
                 4
             }
@@ -1025,9 +1026,9 @@ impl CPU {
             }
             0xD8 => self.ret_c(),
             0xD9 => {
-                // RETI
-                panic!("Unknown Instruction");
-                // 4
+                self.interrupt_master = true;
+                self.registers.pc = self.stack_pop();
+                4
             }
             0xDA => {
                 let w: u16 = self.fetch_word();
@@ -2698,11 +2699,13 @@ impl CPU {
         }
     }
 
-    fn cpu_c_s8(&mut self, s8: u8) {
+    fn cpu_c_s8(&mut self, s8: u8) -> u8 {
         let carry: u8 = self.registers.get_bit(Flags::Carry);
-        if carry == 0 {
+        if carry > 0 {
             self.registers.pc = (self.registers.pc as i16 + (s8) as i16) as u16;
+            return 3;
         }
+        return 2;
     }
 
     fn cpu_ret_nz(&mut self) -> u8 {
@@ -2768,17 +2771,16 @@ impl CPU {
 
     fn jp_z_a16(&mut self, a16: u16) -> u8 {
         let zero: u8 = self.registers.get_bit(Flags::Zero);
-
-        if zero == 1 {
+        if zero > 0 {
             self.registers.pc = a16;
-            return 6;
+            return 4;
         }
-        3
+        return 3;
     }
 
     fn call_z_a16(&mut self, a16: u16) -> u8 {
         let zero: u8 = self.registers.get_bit(Flags::Zero);
-        if zero == 0 {
+        if zero > 1 {
             self.stack_push(self.registers.pc);
             self.registers.pc = a16;
             return 6;
@@ -2840,7 +2842,7 @@ impl CPU {
 
     fn jp_c_a16(&mut self, a16: u16) -> u8 {
         let carry: u8 = self.registers.get_bit(Flags::Carry);
-        if carry == 1 {
+        if carry > 0 {
             self.registers.pc = a16;
             return 4;
         }
@@ -2849,7 +2851,7 @@ impl CPU {
 
     fn call_c_a16(&mut self, a16: u16) -> u8 {
         let carry: u8 = self.registers.get_bit(Flags::Carry);
-        if carry == 1 {
+        if carry > 0 {
             self.stack_push(self.registers.pc);
             self.registers.pc = a16;
             return 6;
