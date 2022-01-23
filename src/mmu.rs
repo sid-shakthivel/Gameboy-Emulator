@@ -106,7 +106,12 @@ impl MMU {
             0xFF44 => self.io_ram[0xFF44 - 0xFF00] = 0,
             0xFF46 => self.dma_transfer(address),
             0xFF00..=0xFF7F => self.io_ram[(address - 0xFF00) as usize] = value,
-            0xFF80..=0xFFFE => self.high_ram[(address - 0xFF80) as usize] = value,
+            0xFF80..=0xFFFE => {
+                if address == 0xFF91 {
+                    // println!("Writing {:x}", value);
+                }
+                self.high_ram[(address - 0xFF80) as usize] = value
+            }
             0xFFFF => self.interrupt_enabled_register = value,
             _ => (),
         };

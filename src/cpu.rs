@@ -1058,9 +1058,8 @@ impl CPU {
                 3
             }
             0xE2 => {
-                self.mmu
-                    .borrow_mut()
-                    .wb((self.registers.c as u16) >> 8, self.registers.a);
+                let v: u16 = (0xFF << 8) | self.registers.c as u16;
+                self.mmu.borrow_mut().wb(v, self.registers.a);
                 2
             }
             0xE5 => {
@@ -1110,7 +1109,8 @@ impl CPU {
                 3
             }
             0xF2 => {
-                self.registers.a = self.mmu.borrow().rb(self.registers.c as u16);
+                let v: u16 = 0xFF00 | self.registers.c as u16;
+                self.registers.a = self.mmu.borrow().rb(v);
                 2
             }
             0xF3 => {
