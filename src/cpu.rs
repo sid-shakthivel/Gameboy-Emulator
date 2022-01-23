@@ -334,7 +334,7 @@ impl CPU {
                 2
             }
             0x33 => {
-                self.registers.sp += 1;
+                self.registers.sp = self.registers.sp.wrapping_add(1);
                 2
             }
             0x34 => {
@@ -374,7 +374,7 @@ impl CPU {
                 2
             }
             0x3B => {
-                self.registers.sp -= 1;
+                self.registers.sp = self.registers.sp.wrapping_sub(1);
                 2
             }
             0x3C => {
@@ -1078,8 +1078,23 @@ impl CPU {
             }
             0xE8 => {
                 // add_sp_s8
-                panic!("Unknown Instruction");
-                // 4
+                let b: u16 = self.fetch_signed_byte() as i8 as i16 as u16;
+                self.registers.clear_bit(Flags::Zero);
+                self.registers.clear_bit(Flags::Subtract);
+                if (self.registers.sp & 0x000F) + (b & 0x000F) > 0x000F {
+                    self.registers.set_bit(Flags::HalfCarry);
+                } else {
+                    self.registers.clear_bit(Flags::HalfCarry);
+                }
+
+                if (self.registers.sp & 0x00FF) + (b & 0x00FF) > 0x00FF {
+                    self.registers.set_bit(Flags::Carry);
+                } else {
+                    self.registers.clear_bit(Flags::Carry);
+                }
+
+                self.registers.sp = self.registers.sp.wrapping_add(b);
+                4
             }
             0xE9 => {
                 self.registers.pc = self.registers.hl();
@@ -1132,10 +1147,23 @@ impl CPU {
                 4
             }
             0xF8 => {
-                self.registers.sp += self.fetch_byte() as u16;
-                panic!("Should be signed?");
-                // self.registers.set_hl(self.registers.sp);
-                // 3
+                let b: u16 = self.fetch_signed_byte() as i8 as i16 as u16;
+                self.registers.clear_bit(Flags::Zero);
+                self.registers.clear_bit(Flags::Subtract);
+                if (self.registers.sp & 0x000F) + (b & 0x000F) > 0x000F {
+                    self.registers.set_bit(Flags::HalfCarry);
+                } else {
+                    self.registers.clear_bit(Flags::HalfCarry);
+                }
+
+                if (self.registers.sp & 0x00FF) + (b & 0x00FF) > 0x00FF {
+                    self.registers.set_bit(Flags::Carry);
+                } else {
+                    self.registers.clear_bit(Flags::Carry);
+                }
+
+                self.registers.set_hl(self.registers.sp.wrapping_add(b));
+                3
             }
             0xF9 => {
                 self.registers.sp = self.registers.hl();

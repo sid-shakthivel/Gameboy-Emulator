@@ -33,7 +33,9 @@ fn main() {
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/09-op r,r.gb").unwrap();
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/08-misc instrs.gb").unwrap();
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb").unwrap();
+    // let mut file: File = File::open("ROMS/cpu_instrs/individual/03-op sp,hl.gb").unwrap();
 
+    let mut file: File = File::open("ROMS/cpu_instrs/individual/02-interrupts.gb").unwrap();
     file.read_to_end(&mut file_content).unwrap();
     let mmu: Rc<RefCell<MMU>> = Rc::new(RefCell::new(MMU::new(file_content)));
 
@@ -67,7 +69,7 @@ fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, timer: RefCell<Timer>, mut wi
     let mut cycles_elapsed: u32 = 0;
     let mut total_cycles = 0;
     let mut cycles: u16 = 0;
-    while window.is_open() && !window.is_key_down(Key::Escape) { 
+    while window.is_open() && !window.is_key_down(Key::Escape) {
         while cycles_elapsed < MAXCYCLES {
             if cpu.borrow().is_stopped == false {
                 let opcode = cpu.borrow_mut().fetch_opcode();
