@@ -40,21 +40,21 @@ impl CPU {
     }
 
     pub fn fetch_byte(&mut self) -> u8 {
-        let b = self.mmu.borrow().rb(self.registers.pc);
-        print!(" Byte: {:#X}", b);
+        let b = self.mmu.borrow_mut().rb(self.registers.pc);
+        // print!(" Byte: {:#X}", b);
         self.registers.pc += 1;
         b
     }
 
     pub fn fetch_opcode(&mut self) -> u8 {
-        let b = self.mmu.borrow().rb(self.registers.pc);
+        let b = self.mmu.borrow_mut().rb(self.registers.pc);
         // print!(" Byte: {:#X}", b);
         self.registers.pc += 1;
         b
     }
 
     fn fetch_signed_byte(&mut self) -> i8 {
-        let b: i8 = self.mmu.borrow().rb(self.registers.pc) as i8;
+        let b: i8 = self.mmu.borrow_mut().rb(self.registers.pc) as i8;
         self.registers.pc += 1;
         b
     }
@@ -63,15 +63,10 @@ impl CPU {
         (self.fetch_byte() as u16) + ((self.fetch_byte() as u16) << 8)
     }
 
-    pub fn request_interrupt(&mut self, index: u8) {
-        let v: u8 = self.mmu.borrow().rb(0xFF0F) | (1 << index);
-        self.mmu.borrow_mut().wb(0xFF0F, v);
-    }
-
     pub fn do_interrupts(&mut self) {
         if self.interrupt_master == true {
-            let interrupt_request_register: u8 = self.mmu.borrow().rb(0xFF0F); // IF
-            let interrupt_enabled_register: u8 = self.mmu.borrow().rb(0xFFFF); // IE
+            let interrupt_request_register: u8 = self.mmu.borrow_mut().rb(0xFF0F); // IF
+            let interrupt_enabled_register: u8 = self.mmu.borrow_mut().rb(0xFFFF); // IE
             if interrupt_request_register > 0 {
                 for i in 0..5 {
                     if interrupt_request_register & (1 << i) > 0
@@ -86,7 +81,7 @@ impl CPU {
 
     pub fn service_interrupt(&mut self, index: u8) {
         self.interrupt_master = false;
-        let interupt_request_register: u8 = self.mmu.borrow().rb(0xFF0F) & !(1 << index); // IF
+        let interupt_request_register: u8 = self.mmu.borrow_mut().rb(0xFF0F) & !(1 << index); // IF
         self.mmu.borrow_mut().wb(0xFF0F, interupt_request_register);
         self.stack_push(self.registers.pc);
         self.registers.pc = match index {
@@ -143,7 +138,7 @@ impl CPU {
                 2
             }
             0x0A => {
-                self.registers.a = self.mmu.borrow().rb(self.registers.bc());
+                self.registers.a = self.mmu.borrow_mut().rb(self.registers.bc());
                 2
             }
             0x0B => {
@@ -215,7 +210,7 @@ impl CPU {
                 2
             }
             0x1A => {
-                self.registers.a = self.mmu.borrow().rb(self.registers.de());
+                self.registers.a = self.mmu.borrow_mut().rb(self.registers.de());
                 2
             }
             0x1B => {
@@ -284,7 +279,7 @@ impl CPU {
                 2
             }
             0x2A => {
-                self.registers.a = self.mmu.borrow().rb(self.registers.hl());
+                self.registers.a = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.registers.set_hl(self.registers.hl().wrapping_add(1));
                 2
             }
@@ -336,13 +331,13 @@ impl CPU {
                 2
             }
             0x34 => {
-                let num: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let num: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 let res: u8 = self.alu_inc(num);
                 self.mmu.borrow_mut().wb(self.registers.hl(), res);
                 3
             }
             0x35 => {
-                let num: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let num: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 let res: u8 = self.alu_dec(num);
                 self.mmu.borrow_mut().wb(self.registers.hl(), res);
                 3
@@ -367,7 +362,7 @@ impl CPU {
                 2
             }
             0x3A => {
-                self.registers.a = self.mmu.borrow().rb(self.registers.hl());
+                self.registers.a = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.registers.set_hl(self.registers.hl().wrapping_sub(1));
                 2
             }
@@ -422,7 +417,7 @@ impl CPU {
                 1
             }
             0x46 => {
-                self.registers.b = self.mmu.borrow().rb(self.registers.hl());
+                self.registers.b = self.mmu.borrow_mut().rb(self.registers.hl());
                 2
             }
             0x47 => {
@@ -454,7 +449,7 @@ impl CPU {
                 1
             }
             0x4E => {
-                self.registers.c = self.mmu.borrow().rb(self.registers.hl());
+                self.registers.c = self.mmu.borrow_mut().rb(self.registers.hl());
                 2
             }
             0x4F => {
@@ -486,7 +481,7 @@ impl CPU {
                 1
             }
             0x56 => {
-                self.registers.d = self.mmu.borrow().rb(self.registers.hl());
+                self.registers.d = self.mmu.borrow_mut().rb(self.registers.hl());
                 2
             }
             0x57 => {
@@ -518,7 +513,7 @@ impl CPU {
                 1
             }
             0x5E => {
-                self.registers.e = self.mmu.borrow().rb(self.registers.hl());
+                self.registers.e = self.mmu.borrow_mut().rb(self.registers.hl());
                 2
             }
             0x5F => {
@@ -550,7 +545,7 @@ impl CPU {
                 1
             }
             0x66 => {
-                self.registers.h = self.mmu.borrow().rb(self.registers.hl());
+                self.registers.h = self.mmu.borrow_mut().rb(self.registers.hl());
                 2
             }
             0x67 => {
@@ -582,7 +577,7 @@ impl CPU {
                 1
             }
             0x6E => {
-                self.registers.l = self.mmu.borrow().rb(self.registers.hl());
+                self.registers.l = self.mmu.borrow_mut().rb(self.registers.hl());
                 2
             }
             0x6F => {
@@ -661,7 +656,7 @@ impl CPU {
                 1
             }
             0x7E => {
-                self.registers.a = self.mmu.borrow().rb(self.registers.hl());
+                self.registers.a = self.mmu.borrow_mut().rb(self.registers.hl());
                 2
             }
             0x7F => {
@@ -693,7 +688,7 @@ impl CPU {
                 1
             }
             0x86 => {
-                let v = self.mmu.borrow().rb(self.registers.hl());
+                let v = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.alu_add(v);
                 2
             }
@@ -726,7 +721,7 @@ impl CPU {
                 1
             }
             0x8E => {
-                let v = self.mmu.borrow().rb(self.registers.hl());
+                let v = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.alu_adc(v);
                 2
             }
@@ -759,7 +754,7 @@ impl CPU {
                 1
             }
             0x96 => {
-                let v = self.mmu.borrow().rb(self.registers.hl());
+                let v = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.alu_sub(v);
                 2
             }
@@ -792,7 +787,7 @@ impl CPU {
                 1
             }
             0x9E => {
-                let v = self.mmu.borrow().rb(self.registers.hl());
+                let v = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.alu_sbc(v);
                 2
             }
@@ -825,7 +820,7 @@ impl CPU {
                 1
             }
             0xA6 => {
-                let v = self.mmu.borrow().rb(self.registers.hl());
+                let v = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.alu_and(v);
                 2
             }
@@ -858,7 +853,7 @@ impl CPU {
                 1
             }
             0xAE => {
-                let v = self.mmu.borrow().rb(self.registers.hl());
+                let v = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.alu_xor(v);
                 2
             }
@@ -891,7 +886,7 @@ impl CPU {
                 1
             }
             0xB6 => {
-                let v = self.mmu.borrow().rb(self.registers.hl());
+                let v = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.alu_or(v);
                 2
             }
@@ -924,7 +919,7 @@ impl CPU {
                 1
             }
             0xBE => {
-                let v = self.mmu.borrow().rb(self.registers.hl());
+                let v = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.alu_cp(v);
                 2
             }
@@ -1114,7 +1109,7 @@ impl CPU {
             }
             0xF0 => {
                 let v: u16 = 0xFF00 | self.fetch_byte() as u16;
-                self.registers.a = self.mmu.borrow().rb(v);
+                self.registers.a = self.mmu.borrow_mut().rb(v);
                 3
             }
             0xF1 => {
@@ -1124,7 +1119,7 @@ impl CPU {
             }
             0xF2 => {
                 let v: u16 = 0xFF00 | self.registers.c as u16;
-                self.registers.a = self.mmu.borrow().rb(v);
+                self.registers.a = self.mmu.borrow_mut().rb(v);
                 2
             }
             0xF3 => {
@@ -1169,7 +1164,7 @@ impl CPU {
             }
             0xFA => {
                 let w: u16 = self.fetch_word();
-                self.registers.a = self.mmu.borrow().rb(w);
+                self.registers.a = self.mmu.borrow_mut().rb(w);
                 4
             }
             0xFB => {
@@ -1240,7 +1235,7 @@ impl CPU {
                 2
             }
             0x06 => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_rlc(v);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -1274,7 +1269,7 @@ impl CPU {
                 2
             }
             0x0E => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_rrc(v);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -1308,7 +1303,7 @@ impl CPU {
                 2
             }
             0x16 => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_rl(v);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -1342,7 +1337,7 @@ impl CPU {
                 2
             }
             0x1E => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_rr(v);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -1376,7 +1371,7 @@ impl CPU {
                 2
             }
             0x26 => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_sla(v);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -1410,7 +1405,7 @@ impl CPU {
                 2
             }
             0x2E => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_sra(v);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -1444,7 +1439,7 @@ impl CPU {
                 2
             }
             0x36 => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_swap(v);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -1478,7 +1473,7 @@ impl CPU {
                 2
             }
             0x3E => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_srl(v);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -1512,7 +1507,7 @@ impl CPU {
                 2
             }
             0x46 => {
-                let v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.alu_bit(v, 0);
                 3
             }
@@ -1545,7 +1540,7 @@ impl CPU {
                 2
             }
             0x4E => {
-                let v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.alu_bit(v, 1);
                 3
             }
@@ -1578,7 +1573,7 @@ impl CPU {
                 2
             }
             0x56 => {
-                let v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.alu_bit(v, 2);
                 3
             }
@@ -1611,7 +1606,7 @@ impl CPU {
                 2
             }
             0x5E => {
-                let v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.alu_bit(v, 3);
                 3
             }
@@ -1644,7 +1639,7 @@ impl CPU {
                 2
             }
             0x66 => {
-                let v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.alu_bit(v, 4);
                 3
             }
@@ -1677,7 +1672,7 @@ impl CPU {
                 2
             }
             0x6E => {
-                let v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.alu_bit(v, 5);
                 3
             }
@@ -1710,7 +1705,7 @@ impl CPU {
                 2
             }
             0x76 => {
-                let v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.alu_bit(v, 6);
                 3
             }
@@ -1743,7 +1738,7 @@ impl CPU {
                 2
             }
             0x7E => {
-                let v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 self.alu_bit(v, 7);
                 3
             }
@@ -1776,7 +1771,7 @@ impl CPU {
                 2
             }
             0x86 => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_res(v, 0);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -1810,7 +1805,7 @@ impl CPU {
                 2
             }
             0x8E => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_res(v, 1);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -1844,7 +1839,7 @@ impl CPU {
                 2
             }
             0x96 => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_res(v, 2);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -1878,7 +1873,7 @@ impl CPU {
                 2
             }
             0x9E => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_res(v, 3);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -1912,7 +1907,7 @@ impl CPU {
                 2
             }
             0xA6 => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_res(v, 4);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -1946,7 +1941,7 @@ impl CPU {
                 2
             }
             0xAE => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_res(v, 5);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -1980,7 +1975,7 @@ impl CPU {
                 2
             }
             0xB6 => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_res(v, 6);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -2014,7 +2009,7 @@ impl CPU {
                 2
             }
             0xBE => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_res(v, 7);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -2048,7 +2043,7 @@ impl CPU {
                 2
             }
             0xC6 => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_set(v, 0);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -2082,7 +2077,7 @@ impl CPU {
                 2
             }
             0xCE => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_set(v, 1);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -2116,7 +2111,7 @@ impl CPU {
                 2
             }
             0xD6 => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_set(v, 2);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -2150,7 +2145,7 @@ impl CPU {
                 2
             }
             0xDE => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_set(v, 3);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -2184,7 +2179,7 @@ impl CPU {
                 2
             }
             0xE6 => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_set(v, 4);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -2218,7 +2213,7 @@ impl CPU {
                 2
             }
             0xEE => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_set(v, 5);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -2252,7 +2247,7 @@ impl CPU {
                 2
             }
             0xF6 => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_set(v, 6);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -2286,7 +2281,7 @@ impl CPU {
                 2
             }
             0xFE => {
-                let mut v: u8 = self.mmu.borrow().rb(self.registers.hl());
+                let mut v: u8 = self.mmu.borrow_mut().rb(self.registers.hl());
                 v = self.alu_set(v, 7);
                 self.mmu.borrow_mut().wb(self.registers.hl(), v);
                 4
@@ -2951,9 +2946,3 @@ impl CPU {
         }
     }
 }
-
-// pub struct Opcode {
-// mnemonic: &'static str,
-// length: u8,
-// execute: u32,
-// }

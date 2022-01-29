@@ -23,13 +23,14 @@ impl Timer {
     }
 
     fn is_clock_enabled(&self) -> u8 {
-        self.mmu.borrow().rb(0xFF07) & (1 << 3)
+        self.mmu.borrow_mut().rb(0xFF07) & (1 << 3)
     }
 
     fn get_frequency(&self) -> u32 {
-        let speed: u16 =
-            (self.mmu.borrow().rb(0xFF07) & (1 << 1) & self.mmu.borrow().rb(0xFF07) & (1 << 2))
-                as u16;
+        let speed: u16 = (self.mmu.borrow_mut().rb(0xFF07)
+            & (1 << 1)
+            & self.mmu.borrow_mut().rb(0xFF07)
+            & (1 << 2)) as u16;
         match speed {
             0 => 4096,
             1 => 262144,
@@ -59,14 +60,13 @@ impl Timer {
             self.timer_counter -= cycles;
 
             if self.timer_counter <= 0 {
-
                 self.reset_timer_counter();
-                let timer_value: u8 = self.mmu.borrow().rb(0xFF06);
+                let timer_value: u8 = self.mmu.borrow_mut().rb(0xFF06);
                 if timer_value == 0xFF {
                     self.mmu
                         .borrow_mut()
-                        .wb(0xFF05, self.mmu.borrow().rb(0xFF06));
-                   self.cpu.borrow_mut().request_interrupt(2); 
+                        .wb(0xFF05, self.mmu.borrow_mut().rb(0xFF06));
+                    self.mmu.borrow_mut().request_interrupt(2);
                 } else {
                     self.mmu.borrow_mut().wb(0xFF05, timer_value + 1);
                 }
@@ -78,8 +78,10 @@ impl Timer {
         self.divider_counter += cycles;
         if self.divider_counter >= 255 {
             self.divider_counter = 0;
-            let divider_value: u8 = self.mmu.borrow().rb(0xFF04);
-            self.mmu.borrow_mut().wb(0xFF04, divider_value.wrapping_add(1));
+            let divider_value: u8 = self.mmu.borrow_mut().rb(0xFF04);
+            self.mmu
+                .borrow_mut()
+                .wb(0xFF04, divider_value.wrapping_add(1));
         }
     }
 }

@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 pub struct MMU {
     pub rom: [u8; 32769],
     pub graphics_ram: [u8; 8192],
@@ -6,6 +9,7 @@ pub struct MMU {
     pub io_ram: [u8; 128],
     pub high_ram: [u8; 127], // Stack
     pub interrupt_enabled_register: u8,
+    pub joypad_state: u8,
 }
 
 impl MMU {
@@ -18,13 +22,8 @@ impl MMU {
             io_ram: [0; 128],
             high_ram: [0; 127],
             interrupt_enabled_register: 0,
+            joypad_state: 0,
         };
-
-        // let mut i: usize = 0;
-        // for byte in mmu.high_ram {
-        // mmu.high_ram[i] = 0xFF;
-        // i += 1;
-        // }
 
         mmu.wb(0xFF05, 0x00);
         mmu.wb(0xFF06, 0x00);
@@ -60,8 +59,6 @@ impl MMU {
 
         mmu.io_ram[0] = 0xF;
 
-        // mmu.io_ram[0xFF44 - 0xFF00] = 0x90;
-
         let mut i: usize = 0;
         for byte in rom {
             mmu.rom[i] = byte;
@@ -79,6 +76,7 @@ impl MMU {
             0xC000..=0xDFFF => self.working_ram[(address - 0xC000) as usize],
             0xE000..=0xFDFF => self.working_ram[(address - 0xE000) as usize],
             0xFE00..=0xFE9F => 0, // Graphics - Sprite
+            0xFF00 => self.get_joypad_state(),
             0xFF00..=0xFF7F => self.io_ram[(address - 0xFF00) as usize],
             0xFF80..=0xFFFE => self.high_ram[(address - 0xFF80) as usize],
             0xFFFF => self.interrupt_enabled_register,
@@ -98,13 +96,6 @@ impl MMU {
             0xC000..=0xDFFF => self.working_ram[(address - 0xC000) as usize] = value,
             0xE000..=0xFDFF => self.working_ram[(address - 0xE000) as usize] = value,
             0xFE00..=0xFE9F => (), // Graphics - Sprite
-            0xFF00 => {}
-            0xFF01 => {
-                // println!("{} ", value);
-            }
-            0xFF02 => {
-                // panic!("{}", value);
-            }
             0xFF04 => self.io_ram[0xFF04 - 0xFF00] = 0,
             0xFF44 => self.io_ram[0xFF44 - 0xFF00] = 0,
             0xFF46 => self.dma_transfer(address),
@@ -125,5 +116,58 @@ impl MMU {
         for i in 0x00..0xA0 {
             self.wb(0xFE00 + i, self.rb(address + i));
         }
+    }
+
+    pub fn request_interrupt(&mut self, index: u8) {
+        let v: u8 = self.rb(0xFF0F) | (1 << index);
+        self.wb(0xFF0F, v);
+    }
+
+    pub fn key_pressed(&mut self, key: u8) {
+        let mut previously_unset: bool = false;
+
+        if (self.joypad_state & (1 << key)) == 0 {
+            previously_unset = true;
+        }
+
+        self.joypad_state &= 1 << key;
+
+        let mut is_standard_button: bool = true;
+
+        if key < 3 {
+            is_standard_button = false;
+        }
+
+        let mut request_interrupt: bool = false;
+        let key_req: u8 = self.rb(0xFF00);
+
+        if is_standard_button && ((key_req & (1 << 5)) == 0) {
+            request_interrupt = true;
+        } else if !is_standard_button && (key_req & (1 << 5) == 1) {
+            request_interrupt = true;
+        }
+
+        if request_interrupt && !previously_unset {
+            self.request_interrupt(4);
+        }
+    }
+
+    fn get_joypad_state(&self) -> u8 {
+        let mut res: u8 = self.io_ram[0];
+        res ^= 0xFF;
+        if res & (1 << 4) == 0 {
+            let mut top_joypad: u8 = self.joypad_state >> 4;
+            top_joypad |= 0xF0;
+            res &= top_joypad;
+        } else if res & (1 << 5) == 0 {
+            let mut bottom_joypad: u8 = self.joypad_state & 0xF;
+            bottom_joypad |= 0xF0;
+            res &= bottom_joypad;
+        }
+        res
+    }
+
+    pub fn key_released(&mut self, key: u8) {
+        self.joypad_state |= 1 << key;
     }
 }
