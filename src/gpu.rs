@@ -47,10 +47,10 @@ impl GPU {
         }
 
         // if self.mmu.borrow().io_ram[0xFF44 - 0xFF00] == 153 && cycles > 4 {
-            // let v = self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] + 1;
-            // self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = 0;
-            // self.scanline_counter = 0;
-            // return;
+        // let v = self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] + 1;
+        // self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = 0;
+        // self.scanline_counter = 0;
+        // return;
         // }
 
         if self.scanline_counter >= 456 {
@@ -151,7 +151,7 @@ impl GPU {
     fn draw_scanline(&mut self) {
         let lcd_control = self.mmu.borrow().rb(0xFF40);
         if lcd_control & (1 << 1) == 1 {
-            // self.render_sprites();
+            self.render_sprites();
         }
 
         if lcd_control & (1 << 0) == 1 {
@@ -229,7 +229,6 @@ impl GPU {
             y_pos = current_scanline.wrapping_add(scroll_y);
         }
 
-        // println!("Y-POS: {:#X} Y-OFFSET: {:#X}", y_pos, scroll_y);
         let tile_row: u16 = (((y_pos / 8) as u16) * 32) as u16;
 
         // 160 vertical pixels and 20 tiles
@@ -255,9 +254,6 @@ impl GPU {
                 // tile_data_address += (signed_tile_identifier + 128) * 16;
             } else {
                 tile_data_address = 0x8000 + (unsigned_tile_identifier * 16);
-                if tile_data_address != 0x8200 {
-                    // println!("{:#X}", tile_data_address);
-                }
             }
 
             let mut line: u16 = (y_pos % 8) as u16;
@@ -296,6 +292,59 @@ impl GPU {
         }
     }
 
+    fn render_sprites(&mut self) {
+        let lcd_control: u8 = self.mmu.borrow().rb(0xFF40);
+        let current_scanline: u8 = self.mmu.borrow().rb(0xFF44);
+        let is_8x8: bool = lcd_control & (1 << 2) == 0;
+
+        for i in 0..40 {
+            let x_pos: u8 = self.mmu.borrow_mut().rb(0xFE00 + (i * 4)) - 16;
+            let y_pos: u8 = self.mmu.borrow_mut().rb(0xFE00 + (i * 4) + 1) - 16;
+            let pattern_number: u8 = self.mmu.borrow_mut().rb(0xFE00 + (i * 4) + 2);
+            let attributes: u8 = self.mmu.borrow_mut().rb(0xFE00 + (i * 4) + 3);
+
+            let current_colour_palette: u8 = (attributes & (1 << 4)) == 0 { 0xFF48 } else { 0xFF49};
+            // Check whether 8*8 or 8*16
+            // Check if position is in the scanline
+            // Get tile data and then edit framebuffer 
+            // edit scanline + actual line + bit (1 of 8) + set to a 32 bit number
+
+            let y_offset = if is_8x8 { 8 } else { 16 };
+
+            if current_scanline > y_pos && current_scanline < (y_pos + y_offset) {
+                let unsigned_tile_identifier: u16 = self.mmu.borrow().rb(0x8000) as u16;
+                let mut line: u16 = (y_pos % 8) as u16;
+                line *= 2;
+                let data1 = self.mmu.borrow().rb(tile_data_address + line);
+                let data2 = self.mmu.borrow().rb(tile_data_address + line + 1);
+                for mut j in (0..8).rev() {
+                    let data_colour: u8 = self.get_bit(data2, j) << 1 | self.get_bit(data1, j);
+                    let rgb = match data_colour {
+                        0b00 => self.get_colour(current_colour_palette, 0),
+                        0b01 => self.get_colour(current_colour_palette, 2),
+                        0b10 => self.get_colour(current_colour_palette, 4),
+                        0b11 => self.get_colour(current_colour_palette, 6),
+                        _ => {
+                            panic!("Wrong Combination");
+                        }
+                    };
+                    j -= 7;
+                    j *= -1;
+                    let mut res: u32 = 0;
+                    res = res << 8 | (rgb.0 as u32);
+                    res = res << 8 | (rgb.1 as u32);
+                    res = res << 8 | (rgb.2 as u32);
+                    let test: usize = j as usize + base as usize;
+                    if current_scanline <= 143 && test <= 159 {
+                        let index: usize =
+                            ((current_scanline) as usize * 160) + (j as usize + x_pos as usize);
+                        self.screen_data[index] = res;
+                    }
+                }
+            }
+        }
+    }
+
     // Refactor
     fn get_colour(&mut self, palette: u8, index: i8) -> (u8, u8, u8) {
         let bit: u8 = self.get_bit(palette, index) << 1 | self.get_bit(palette, index + 1);
@@ -308,46 +357,6 @@ impl GPU {
             _ => {
                 panic!("Wrong Combination");
             }
-        }
-    }
-
-    pub fn output_thing(&mut self, tile_data_address: u16) {
-        let colour_palette: u8 = self.mmu.borrow().rb(0xFF47);
-
-        // 8 Words
-        let mut i: u16 = 0;
-        let y_offset = 20;
-
-        while i < 16 {
-            let data1 = self.mmu.borrow().rb(tile_data_address + i);
-            let data2 = self.mmu.borrow().rb(tile_data_address + i + 1);
-
-            // 8 Bits in Byte
-            for mut j in (0..8).rev() {
-                let data_colour: u8 = self.get_bit(data2, j) << 1 | self.get_bit(data1, j);
-
-                let rgb = match data_colour {
-                    0b00 => self.get_colour(colour_palette, 0),
-                    0b01 => self.get_colour(colour_palette, 2),
-                    0b10 => self.get_colour(colour_palette, 4),
-                    0b11 => self.get_colour(colour_palette, 6),
-                    _ => {
-                        panic!("Wrong Combination");
-                    }
-                };
-
-                j -= 7;
-                j *= -1;
-
-                let mut res: u32 = 0;
-                res = res << 8 | (rgb.0 as u32);
-                res = res << 8 | (rgb.1 as u32);
-                res = res << 8 | (rgb.2 as u32);
-                let index: usize = ((i / 2 + y_offset) as usize * 160) + (j as usize);
-                println!("{}", index);
-                self.screen_data[index] = res;
-            }
-            i += 2;
         }
     }
 }

@@ -3,7 +3,7 @@ pub struct MMU {
     pub graphics_ram: [u8; 8192],
     pub external_ram: [u8; 8192],
     pub working_ram: [u8; 8192],
-    pub io_ram: [u8; 127],
+    pub io_ram: [u8; 128],
     pub high_ram: [u8; 127], // Stack
     pub interrupt_enabled_register: u8,
 }
@@ -15,7 +15,7 @@ impl MMU {
             graphics_ram: [0; 8192],
             working_ram: [0; 8192],
             external_ram: [0; 8192],
-            io_ram: [0; 127],
+            io_ram: [0; 128],
             high_ram: [0; 127],
             interrupt_enabled_register: 0,
         };
@@ -58,6 +58,8 @@ impl MMU {
         mmu.wb(0xFF4B, 0x00);
         mmu.wb(0xFFFF, 0x00);
 
+        mmu.io_ram[0] = 0xF;
+
         // mmu.io_ram[0xFF44 - 0xFF00] = 0x90;
 
         let mut i: usize = 0;
@@ -96,6 +98,7 @@ impl MMU {
             0xC000..=0xDFFF => self.working_ram[(address - 0xC000) as usize] = value,
             0xE000..=0xFDFF => self.working_ram[(address - 0xE000) as usize] = value,
             0xFE00..=0xFE9F => (), // Graphics - Sprite
+            0xFF00 => {}
             0xFF01 => {
                 // println!("{} ", value);
             }
@@ -106,12 +109,7 @@ impl MMU {
             0xFF44 => self.io_ram[0xFF44 - 0xFF00] = 0,
             0xFF46 => self.dma_transfer(address),
             0xFF00..=0xFF7F => self.io_ram[(address - 0xFF00) as usize] = value,
-            0xFF80..=0xFFFE => {
-                if address == 0xFF91 {
-                    // println!("Writing {:x}", value);
-                }
-                self.high_ram[(address - 0xFF80) as usize] = value
-            }
+            0xFF80..=0xFFFE => self.high_ram[(address - 0xFF80) as usize] = value,
             0xFFFF => self.interrupt_enabled_register = value,
             _ => (),
         };

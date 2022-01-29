@@ -35,7 +35,8 @@ fn main() {
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb").unwrap();
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/03-op sp,hl.gb").unwrap();
 
-    let mut file: File = File::open("ROMS/cpu_instrs/individual/02-interrupts.gb").unwrap();
+    // let mut file: File = File::open("ROMS/cpu_instrs/individual/02-interrupts.gb").unwrap();
+    let mut file: File = File::open("ROMS/tetris").unwrap();
     file.read_to_end(&mut file_content).unwrap();
     let mmu: Rc<RefCell<MMU>> = Rc::new(RefCell::new(MMU::new(file_content)));
 
