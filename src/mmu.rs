@@ -22,7 +22,7 @@ impl MMU {
             io_ram: [0; 128],
             high_ram: [0; 127],
             interrupt_enabled_register: 0,
-            joypad_state: 0,
+            joypad_state: 0xF,
         };
 
         mmu.wb(0xFF05, 0x00);
@@ -57,7 +57,7 @@ impl MMU {
         mmu.wb(0xFF4B, 0x00);
         mmu.wb(0xFFFF, 0x00);
 
-        mmu.io_ram[0] = 0xF;
+        mmu.io_ram[0] = 0xFF;
 
         let mut i: usize = 0;
         for byte in rom {
@@ -100,6 +100,7 @@ impl MMU {
             0xFF44 => self.io_ram[0xFF44 - 0xFF00] = 0,
             0xFF46 => self.dma_transfer(address),
             0xFF00..=0xFF7F => self.io_ram[(address - 0xFF00) as usize] = value,
+            0xFF80 => (),
             0xFF80..=0xFFFE => self.high_ram[(address - 0xFF80) as usize] = value,
             0xFFFF => self.interrupt_enabled_register = value,
             _ => (),

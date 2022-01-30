@@ -41,7 +41,7 @@ impl CPU {
 
     pub fn fetch_byte(&mut self) -> u8 {
         let b = self.mmu.borrow_mut().rb(self.registers.pc);
-        // print!(" Byte: {:#X}", b);
+        print!(" Byte: {:#X}", b);
         self.registers.pc += 1;
         b
     }
@@ -67,13 +67,11 @@ impl CPU {
         if self.interrupt_master == true {
             let interrupt_request_register: u8 = self.mmu.borrow_mut().rb(0xFF0F); // IF
             let interrupt_enabled_register: u8 = self.mmu.borrow_mut().rb(0xFFFF); // IE
-            if interrupt_request_register > 0 {
-                for i in 0..5 {
-                    if interrupt_request_register & (1 << i) > 0
-                        && interrupt_enabled_register & (1 << i) > 0
-                    {
-                        self.service_interrupt(i);
-                    }
+            for i in 0..5 {
+                if interrupt_request_register & (1 << i) > 0
+                    && interrupt_enabled_register & (1 << i) > 0
+                {
+                    self.service_interrupt(i);
                 }
             }
         }
@@ -81,8 +79,8 @@ impl CPU {
 
     pub fn service_interrupt(&mut self, index: u8) {
         self.interrupt_master = false;
-        let interupt_request_register: u8 = self.mmu.borrow_mut().rb(0xFF0F) & !(1 << index); // IF
-        self.mmu.borrow_mut().wb(0xFF0F, interupt_request_register);
+        let interrupt_request_register: u8 = self.mmu.borrow().rb(0xFF0F) & !(1 << index);
+        self.mmu.borrow_mut().wb(0xFF0F, interrupt_request_register);
         self.stack_push(self.registers.pc);
         self.registers.pc = match index {
             0x00 => 0x40,
@@ -2647,7 +2645,7 @@ impl CPU {
         a
     }
 
-    fn alu_set(&mut self, mut a: u8, mut b: u8) -> u8 {
+    fn alu_set(&mut self, mut a: u8, b: u8) -> u8 {
         a |= 1 << b;
         a
     }
