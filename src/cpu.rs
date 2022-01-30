@@ -41,7 +41,7 @@ impl CPU {
 
     pub fn fetch_byte(&mut self) -> u8 {
         let b = self.mmu.borrow_mut().rb(self.registers.pc);
-        print!(" Byte: {:#X}", b);
+        // print!(" Byte: {:#X}", b);
         self.registers.pc += 1;
         b
     }

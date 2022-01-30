@@ -11,7 +11,6 @@ pub struct GPU {
     cpu: Rc<RefCell<CPU>>,
     pub screen_data: [u32; 23040],
     mode: Mode,
-    ly: u8,
 }
 
 enum Mode {
@@ -30,7 +29,6 @@ impl GPU {
             cpu: cpu,
             screen_data: [0; 23040],
             mode: Mode::OAM,
-            ly: 0,
         }
     }
 
@@ -55,28 +53,6 @@ impl GPU {
             if current_scanline == 144 {
                 // V-Blank Interrupt
                 self.mmu.borrow_mut().request_interrupt(0);
-            }
-        }
-    }
-
-    pub fn quick_update(&mut self, cycles: u16) {
-        for i in 0..cycles {
-            if self.is_lcd_enabled() >= 0 {
-                self.scanline_counter += 1;
-                if self.scanline_counter == 456 {
-                    if self.mmu.borrow_mut().rb(0xFF44) < 144 {
-                        self.draw_scanline();
-                    }
-                    if self.scanline_counter == 143 {
-                        self.mmu.borrow_mut().request_interrupt(0);
-                    }
-                    let v = self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] + 1;
-                    self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = v % 154;
-                    self.scanline_counter = 0;
-                }
-            } else {
-                self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = 0;
-                self.scanline_counter = 0;
             }
         }
     }
@@ -142,7 +118,7 @@ impl GPU {
 
     fn draw_scanline(&mut self) {
         let lcd_control = self.mmu.borrow_mut().rb(0xFF40);
-        if lcd_control & (1 << 1) == 1 {
+        if lcd_control & (1 << 1) > 0 {
             self.render_sprites();
         }
 
@@ -290,26 +266,37 @@ impl GPU {
         let is_8x8: bool = lcd_control & (1 << 2) == 0;
 
         for i in 0..40 {
-            let x_pos: u8 = self.mmu.borrow_mut().rb(0xFE00 + (i * 4)) - 16;
-            let y_pos: u8 = self.mmu.borrow_mut().rb(0xFE00 + (i * 4) + 1) - 16;
+            // Check whether 8*8 or 8*16
+            // Check if position is in the scanline
+            // Get tile data and then edit framebuffer
+            // edit scanline + actual line + bit (1 of 8) + set to a 32 bit number
+
+            let x_pos: u8 = self.mmu.borrow_mut().rb(0xFE00 + (i * 4)).wrapping_sub(16);
+            let y_pos: u8 = self
+                .mmu
+                .borrow_mut()
+                .rb(0xFE00 + (i * 4) + 1)
+                .wrapping_sub(8);
             let tile_identifier: u16 = self.mmu.borrow_mut().rb(0xFE00 + (i * 4) + 2) as u16;
             let attributes: u8 = self.mmu.borrow_mut().rb(0xFE00 + (i * 4) + 3);
+
+            // panic!(
+            //     "{} {} {} {}",
+            //     self.mmu.borrow().rb(0xFE00 + (i * 4)),
+            //     self.mmu.borrow().rb(0xFE00 + (i * 4) + 1),
+            //     tile_identifier,
+            //     attributes
+            // );
 
             let mut current_colour_palette: u8 = self.mmu.borrow_mut().rb(0xFF49);
             if (attributes & (1 << 4)) == 0 {
                 current_colour_palette = self.mmu.borrow_mut().rb(0xFF48);
             }
 
-            // Check whether 8*8 or 8*16
-            // Check if position is in the scanline
-            // Get tile data and then edit framebuffer
-            // edit scanline + actual line + bit (1 of 8) + set to a 32 bit number
-
             let y_offset = if is_8x8 { 8 } else { 16 };
 
-            if current_scanline > y_pos && current_scanline < (y_pos + y_offset) {
-                let tile_data_address: u16 =
-                    self.mmu.borrow_mut().rb(0x8000 + tile_identifier) as u16;
+            if current_scanline >= y_pos && current_scanline <= (y_pos + y_offset) {
+                let tile_data_address: u16 = 0x8000 + (tile_identifier * 16);
                 let mut line: u16 = (y_pos % 8) as u16;
                 line *= 2;
                 let data1 = self.mmu.borrow_mut().rb(tile_data_address + line);

@@ -6,6 +6,7 @@ pub struct MMU {
     pub graphics_ram: [u8; 8192],
     pub external_ram: [u8; 8192],
     pub working_ram: [u8; 8192],
+    pub sprite_oam: [u8; 160],
     pub io_ram: [u8; 128],
     pub high_ram: [u8; 127], // Stack
     pub interrupt_enabled_register: u8,
@@ -19,6 +20,7 @@ impl MMU {
             graphics_ram: [0; 8192],
             working_ram: [0; 8192],
             external_ram: [0; 8192],
+            sprite_oam: [0; 160],
             io_ram: [0; 128],
             high_ram: [0; 127],
             interrupt_enabled_register: 0,
@@ -75,7 +77,7 @@ impl MMU {
             0xA000..=0xBFFF => self.external_ram[(address - 0xA000) as usize],
             0xC000..=0xDFFF => self.working_ram[(address - 0xC000) as usize],
             0xE000..=0xFDFF => self.working_ram[(address - 0xE000) as usize],
-            0xFE00..=0xFE9F => 0, // Graphics - Sprite
+            0xFE00..=0xFE9F => self.sprite_oam[(address - 0xFE00) as usize],
             0xFF00 => self.get_joypad_state(),
             0xFF00..=0xFF7F => self.io_ram[(address - 0xFF00) as usize],
             0xFF80..=0xFFFE => self.high_ram[(address - 0xFF80) as usize],
@@ -95,7 +97,7 @@ impl MMU {
             0xA000..=0xBFFF => self.external_ram[(address - 0xA000) as usize] = value,
             0xC000..=0xDFFF => self.working_ram[(address - 0xC000) as usize] = value,
             0xE000..=0xFDFF => self.working_ram[(address - 0xE000) as usize] = value,
-            0xFE00..=0xFE9F => (), // Graphics - Sprite
+            0xFE00..=0xFE9F => self.sprite_oam[(address - 0xFE00) as usize] = value,
             0xFF04 => self.io_ram[0xFF04 - 0xFF00] = 0,
             0xFF44 => self.io_ram[0xFF44 - 0xFF00] = 0,
             0xFF46 => self.dma_transfer(address),
@@ -117,6 +119,13 @@ impl MMU {
         for i in 0x00..0xA0 {
             self.wb(0xFE00 + i, self.rb(address + i));
         }
+        println!(
+            "{} {} {} {}",
+            self.rb(0xFE00),
+            self.rb(0xFE00 + 1),
+            self.rb(0xFE00 + 2),
+            self.rb(0xFE00 + 3)
+        );
     }
 
     pub fn request_interrupt(&mut self, index: u8) {
