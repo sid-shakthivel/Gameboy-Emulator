@@ -271,33 +271,40 @@ impl GPU {
             // Get tile data and then edit framebuffer
             // edit scanline + actual line + bit (1 of 8) + set to a 32 bit number
 
-            let x_pos: u8 = self.mmu.borrow_mut().rb(0xFE00 + (i * 4)).wrapping_sub(16);
+            let offset: u16 = i * 40;
+            let x_pos: u8 = self
+                .mmu
+                .borrow()
+                .rb(offset.wrapping_add(0xFE00))
+                .wrapping_sub(16);
             let y_pos: u8 = self
                 .mmu
-                .borrow_mut()
-                .rb(0xFE00 + (i * 4) + 1)
+                .borrow()
+                .rb(offset.wrapping_add(0xFE00).wrapping_add(1))
                 .wrapping_sub(8);
-            let tile_identifier: u16 = self.mmu.borrow_mut().rb(0xFE00 + (i * 4) + 2) as u16;
-            let attributes: u8 = self.mmu.borrow_mut().rb(0xFE00 + (i * 4) + 3);
-
-            // panic!(
-            //     "{} {} {} {}",
-            //     self.mmu.borrow().rb(0xFE00 + (i * 4)),
-            //     self.mmu.borrow().rb(0xFE00 + (i * 4) + 1),
-            //     tile_identifier,
-            //     attributes
-            // );
+            let tile_identifier: u16 =
+                self.mmu
+                    .borrow()
+                    .rb(offset.wrapping_add(0xFE00).wrapping_add(2)) as u16;
+            let attributes: u8 = self
+                .mmu
+                .borrow()
+                .rb(offset.wrapping_add(0xFE00).wrapping_add(3));
 
             let mut current_colour_palette: u8 = self.mmu.borrow_mut().rb(0xFF49);
             if (attributes & (1 << 4)) == 0 {
                 current_colour_palette = self.mmu.borrow_mut().rb(0xFF48);
             }
 
+            if tile_identifier == 0x58 {
+                // println!("{} {} {}", i, x_pos, y_pos);
+            }
+
             let y_offset = if is_8x8 { 8 } else { 16 };
 
             if current_scanline >= y_pos && current_scanline <= (y_pos + y_offset) {
                 let tile_data_address: u16 = 0x8000 + (tile_identifier * 16);
-                let mut line: u16 = (y_pos % 8) as u16;
+                let mut line: u16 = (current_scanline as u16) - (y_pos as u16);
                 line *= 2;
                 let data1 = self.mmu.borrow_mut().rb(tile_data_address + line);
                 let data2 = self.mmu.borrow_mut().rb(tile_data_address + line + 1);
@@ -318,9 +325,10 @@ impl GPU {
                     res = res << 8 | (rgb.0 as u32);
                     res = res << 8 | (rgb.1 as u32);
                     res = res << 8 | (rgb.2 as u32);
-                    if current_scanline <= 143 && (x_pos + j as u8) <= 159 {
-                        let index: usize =
-                            ((current_scanline) as usize * 160) + (j as usize + x_pos as usize);
+
+                    let temp = x_pos.wrapping_add(j as u8);
+                    if current_scanline <= 143 && (temp) <= 159 {
+                        let index: usize = ((current_scanline) as usize * 160) + (temp as usize);
                         self.screen_data[index] = res;
                     }
                 }

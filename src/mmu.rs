@@ -97,10 +97,9 @@ impl MMU {
             0xA000..=0xBFFF => self.external_ram[(address - 0xA000) as usize] = value,
             0xC000..=0xDFFF => self.working_ram[(address - 0xC000) as usize] = value,
             0xE000..=0xFDFF => self.working_ram[(address - 0xE000) as usize] = value,
-            0xFE00..=0xFE9F => self.sprite_oam[(address - 0xFE00) as usize] = value,
             0xFF04 => self.io_ram[0xFF04 - 0xFF00] = 0,
             0xFF44 => self.io_ram[0xFF44 - 0xFF00] = 0,
-            0xFF46 => self.dma_transfer(address),
+            0xFF46 => self.dma_transfer(value as u16),
             0xFF00..=0xFF7F => self.io_ram[(address - 0xFF00) as usize] = value,
             0xFF80 => (),
             0xFF80..=0xFFFE => self.high_ram[(address - 0xFF80) as usize] = value,
@@ -117,15 +116,8 @@ impl MMU {
     fn dma_transfer(&mut self, data: u16) {
         let address: u16 = data << 8;
         for i in 0x00..0xA0 {
-            self.wb(0xFE00 + i, self.rb(address + i));
+            self.sprite_oam[i] = self.rb((address + i as u16) as u16);
         }
-        println!(
-            "{} {} {} {}",
-            self.rb(0xFE00),
-            self.rb(0xFE00 + 1),
-            self.rb(0xFE00 + 2),
-            self.rb(0xFE00 + 3)
-        );
     }
 
     pub fn request_interrupt(&mut self, index: u8) {
