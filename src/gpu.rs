@@ -3,8 +3,6 @@ use crate::mmu::MMU;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-// Write interrupt call
-
 pub struct GPU {
     scanline_counter: u16,
     mmu: Rc<RefCell<MMU>>,
@@ -124,6 +122,7 @@ impl GPU {
         if lcd_control & (1 << 0) == 1 {
             self.render_tiles();
         }
+
         if lcd_control & (1 << 1) > 0 {
             self.render_sprites();
         }
@@ -226,8 +225,6 @@ impl GPU {
                 tile_data_address = 0x8000 + (unsigned_tile_identifier * 16);
             }
 
-            // tile_data_address = 0x8580;
-
             let mut line: u16 = (y_pos % 8) as u16;
             line *= 2;
 
@@ -268,6 +265,13 @@ impl GPU {
         }
     }
 
+    fn test_bit(&self, value: u8, index: u8) -> bool {
+        if value & (1 << index) > 0 {
+            return true;
+        }
+        false
+    }
+
     pub fn render_sprites(&mut self) {
         let lcd_control: u8 = self.mmu.borrow_mut().rb(0xFF40);
         let current_scanline: u8 = self.mmu.borrow_mut().rb(0xFF44);
@@ -277,7 +281,7 @@ impl GPU {
             // Check whether 8*8 or 8*16
             // Check if position is in the scanline
             // Get tile data and then edit framebuffer
-            // edit scanline + actual line + bit (1 of 8) + set to a 32 bit number
+            // edit scanline using x_pos
 
             let offset: u16 = i * 40;
             let y_pos: u8 = self
@@ -299,6 +303,9 @@ impl GPU {
                 .borrow()
                 .rb(offset.wrapping_add(0xFE00).wrapping_add(3));
 
+            let y_flip: bool = self.test_bit(attributes, 6);
+            let x_flip: bool = self.test_bit(attributes, 5);
+
             let mut current_colour_palette: u8 = self.mmu.borrow_mut().rb(0xFF49);
             if (attributes & (1 << 4)) == 0 {
                 current_colour_palette = self.mmu.borrow_mut().rb(0xFF48);
@@ -308,13 +315,23 @@ impl GPU {
             y_offset = 8;
 
             if current_scanline >= y_pos && current_scanline <= (y_pos + y_offset) {
-                let mut line: u16 = (current_scanline as u16) - (y_pos as u16);
+                let mut line: i32 = (current_scanline as i32) - (y_pos as i32);
+
+                if y_flip {
+                    line -= y_offset as i32;
+                    line *= -1;
+                }
+
                 line *= 2;
-                let tile_data_address: u16 = 0x8000 + (tile_identifier * 16) + line;
+                let tile_data_address: u16 = 0x8000 + (tile_identifier * 16) + (line as u16);
 
                 let data1 = self.mmu.borrow_mut().rb(tile_data_address);
                 let data2 = self.mmu.borrow_mut().rb(tile_data_address + 1);
                 for mut j in (0..8).rev() {
+                    if x_flip {
+                        j -= 7;
+                        j *= -1;
+                    }
                     let data_colour: u8 = self.get_bit(data2, j) << 1 | self.get_bit(data1, j);
 
                     let rgb = match data_colour {
