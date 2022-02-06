@@ -132,10 +132,14 @@ impl MMU {
         }
     }
 
+    // Interrupts
+
     pub fn request_interrupt(&mut self, index: u8) {
         let v: u8 = self.rb(0xFF0F) | (1 << index);
         self.wb(0xFF0F, v);
     }
+
+    // Joypad
 
     pub fn key_pressed(&mut self, key: u8) {
         let mut previously_unset: bool = false;
@@ -185,6 +189,7 @@ impl MMU {
         self.joypad_state |= 1 << key;
     }
 
+    // Timer
     fn is_clock_enabled(&self) -> u8 {
         self.rb(0xFF07) & (1 << 2)
     }

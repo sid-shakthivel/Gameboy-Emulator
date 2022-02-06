@@ -34,7 +34,7 @@ fn main() {
     // let mut file: File = File::open("ROMS/cpu_instrs/individual/03-op sp,hl.gb").unwrap();
 
     let mut file: File = File::open("ROMS/cpu_instrs/individual/02-interrupts.gb").unwrap();
-    // let mut file: File = File::open("ROMS/tetris").unwrap();
+    let mut file: File = File::open("ROMS/tetris").unwrap();
     file.read_to_end(&mut file_content).unwrap();
     let mmu: Rc<RefCell<MMU>> = Rc::new(RefCell::new(MMU::new(file_content)));
 
@@ -78,7 +78,7 @@ fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, mut window: Window) {
                 cpu.borrow_mut().mmu.borrow_mut().update_timers(cycles);
                 gpu.borrow_mut().update_graphics(cycles);
                 cpu.borrow_mut().do_interrupts();
-                // println!("")
+                // println!("")p
             }
         }
 

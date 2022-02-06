@@ -283,7 +283,7 @@ impl GPU {
             // Get tile data and then edit framebuffer
             // edit scanline using x_pos
 
-            let offset: u16 = i * 40;
+            let offset: u16 = (39 - i) * (4);
             let y_pos: u8 = self
                 .mmu
                 .borrow()
@@ -302,22 +302,25 @@ impl GPU {
                 .mmu
                 .borrow()
                 .rb(offset.wrapping_add(0xFE00).wrapping_add(3));
-
+            let belowbg: bool = attributes & (1 << 7) != 0;
             let y_flip: bool = self.test_bit(attributes, 6);
             let x_flip: bool = self.test_bit(attributes, 5);
 
-            let mut current_colour_palette: u8 = self.mmu.borrow_mut().rb(0xFF49);
+            let mut current_colour_palette: u8 = self.mmu.borrow_mut().rb(0xFF48);
             if (attributes & (1 << 4)) == 0 {
-                current_colour_palette = self.mmu.borrow_mut().rb(0xFF48);
+                current_colour_palette = self.mmu.borrow_mut().rb(0xFF49);
             }
 
-            let mut y_offset = if is_8x8 { 8 } else { 16 };
-            y_offset = 8;
+            let y_offset = if is_8x8 { 8 } else { 16 };
 
-            if current_scanline >= y_pos && current_scanline <= (y_pos + y_offset) {
+            if current_scanline >= y_pos && current_scanline < (y_pos + y_offset) {
+                if tile_identifier == 0x58 {
+                    // println!("X_POS = {} Y_POS = {}", x_pos, y_pos);
+                }
                 let mut line: i32 = (current_scanline as i32) - (y_pos as i32);
 
                 if y_flip {
+                    println!("oh dear");
                     line -= y_offset as i32;
                     line *= -1;
                 }
@@ -329,12 +332,13 @@ impl GPU {
                 let data2 = self.mmu.borrow_mut().rb(tile_data_address + 1);
                 for mut j in (0..8).rev() {
                     if x_flip {
+                        println!("oh oh dear");
                         j -= 7;
                         j *= -1;
                     }
                     let data_colour: u8 = self.get_bit(data2, j) << 1 | self.get_bit(data1, j);
 
-                    let rgb = match data_colour {
+                    let mut rgb = match data_colour {
                         0b00 => self.get_colour(current_colour_palette, 0),
                         0b01 => self.get_colour(current_colour_palette, 2),
                         0b10 => self.get_colour(current_colour_palette, 4),
@@ -343,6 +347,11 @@ impl GPU {
                             panic!("Wrong Combination");
                         }
                     };
+
+                    // White is transparent
+                    if rgb.0 == 0xFF || rgb.1 == 0xFF || rgb.2 == 0xFF {
+                        continue;
+                    }
 
                     j -= 7;
                     j *= -1;
