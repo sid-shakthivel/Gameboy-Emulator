@@ -11,6 +11,8 @@ pub struct MMU {
     pub high_ram: [u8; 127], // Stack
     pub interrupt_enabled_register: u8,
     pub joypad_state: u8,
+    timer_counter: u16,
+    divider_counter: u16,
 }
 
 impl MMU {
@@ -25,6 +27,8 @@ impl MMU {
             high_ram: [0; 127],
             interrupt_enabled_register: 0,
             joypad_state: 0xF,
+            timer_counter: 1024,
+            divider_counter: 0,
         };
 
         mmu.wb(0xFF05, 0x00);
@@ -97,7 +101,15 @@ impl MMU {
             0xA000..=0xBFFF => self.external_ram[(address - 0xA000) as usize] = value,
             0xC000..=0xDFFF => self.working_ram[(address - 0xC000) as usize] = value,
             0xE000..=0xFDFF => self.working_ram[(address - 0xE000) as usize] = value,
-            0xFF04 => self.io_ram[0xFF04 - 0xFF00] = 0,
+            0xFF04 => self.io_ram[0xFF04 - 0xFF00] = 0, // Divisor Register
+            0xFF07 => {
+                let current_frequency = self.rb(0xFF07) & 0x3;
+                self.io_ram[0xFF07 - 0xFF00] = value;
+                let new_frequency = self.rb(0xFF07) & 0x3;
+                if current_frequency != new_frequency {
+                    self.set_timer_counter();
+                }
+            }
             0xFF44 => self.io_ram[0xFF44 - 0xFF00] = 0,
             0xFF46 => self.dma_transfer(value as u16),
             0xFF00..=0xFF7F => self.io_ram[(address - 0xFF00) as usize] = value,
@@ -171,5 +183,56 @@ impl MMU {
 
     pub fn key_released(&mut self, key: u8) {
         self.joypad_state |= 1 << key;
+    }
+
+    fn is_clock_enabled(&self) -> u8 {
+        self.rb(0xFF07) & (1 << 2)
+    }
+
+    fn get_frequency(&self) -> u8 {
+        self.rb(0xFF07) & 0x3
+    }
+
+    fn set_timer_counter(&mut self) {
+        self.timer_counter = match self.get_frequency() {
+            0 => 1024,
+            1 => 16,
+            2 => 64,
+            3 => 256,
+            _ => {
+                panic!("Wrong Value")
+            }
+        }
+    }
+
+    pub fn update_timers(&mut self, cycles: u16) {
+        self.update_timer(cycles);
+        self.update_divisor_register(cycles);
+    }
+    fn update_timer(&mut self, cycles: u16) {
+        if self.is_clock_enabled() > 0 {
+            if self.timer_counter.checked_sub(cycles) == None
+                || self.timer_counter.wrapping_sub(cycles) == 0
+            {
+                self.set_timer_counter();
+                if self.rb(0xFF05) == 0xFF {
+                    self.wb(0xFF05, self.rb(0xFF06));
+                    self.request_interrupt(2);
+                } else {
+                    self.wb(0xFF05, self.rb(0xFF05) + 1);
+                }
+            } else {
+                self.timer_counter = self.timer_counter - cycles;
+            }
+        }
+    }
+
+    fn update_divisor_register(&mut self, cycles: u16) {
+        self.divider_counter += cycles;
+        if self.divider_counter >= 255 {
+            self.divider_counter = 0;
+            let divider_value: u8 = self.rb(0xFF04);
+            self.wb(0xFF04, divider_value.wrapping_add(1));
+        }
     }
 }

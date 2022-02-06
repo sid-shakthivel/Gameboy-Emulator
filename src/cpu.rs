@@ -620,8 +620,8 @@ impl CPU {
             }
             0x76 => {
                 // Halt
-                panic!("Unknown Instruction");
-                // 1
+                // panic!("Unknown Instruction");
+                1
             }
             0x77 => {
                 self.mmu

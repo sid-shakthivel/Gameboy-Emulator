@@ -10,8 +10,7 @@ gb_list = []
 
 for line in gb_trace_log:
     line_array = line.split(" ")
-    gb_list.append({"A": int(line_array[1], 16), "F": int(line_array[3], 16), "BC": int(line_array[5], 16), "DE": int(line_array[7], 16), "HL": int(
-        line_array[9], 16), "SP": int(line_array[11], 16), "PC": int(line_array[13], 16), "CY": int(line_array[15], 16), "Opcode": int(line_array[17].strip(), 16)})
+    gb_list.append({"A": int(line_array[1], 16), "F": int(line_array[3], 16), "BC": int(line_array[5], 16), "DE": int(line_array[7], 16), "HL": int(line_array[9], 16), "SP": int(line_array[11], 16), "PC": int(line_array[13], 16), "CY": int(line_array[15], 16), "Opcode": int(line_array[17].strip(), 16)})
 
 i = 0
 for line in rb_trace_log:
