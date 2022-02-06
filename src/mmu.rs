@@ -11,6 +11,7 @@ pub struct MMU {
     pub high_ram: [u8; 127], // Stack
     pub interrupt_enabled_register: u8,
     pub joypad_state: u8,
+    pub joypad_req: u8,
     timer_counter: u16,
     divider_counter: u16,
 }
@@ -26,7 +27,8 @@ impl MMU {
             io_ram: [0; 128],
             high_ram: [0; 127],
             interrupt_enabled_register: 0,
-            joypad_state: 0xF,
+            joypad_state: 0xFF,
+            joypad_req: 0,
             timer_counter: 1024,
             divider_counter: 0,
         };
@@ -112,6 +114,10 @@ impl MMU {
             }
             0xFF44 => self.io_ram[0xFF44 - 0xFF00] = 0,
             0xFF46 => self.dma_transfer(value as u16),
+            0xFF00 => {
+                // println!("Here! {:b}", value);
+                self.io_ram[(address - 0xFF00) as usize] = value;
+            }
             0xFF00..=0xFF7F => self.io_ram[(address - 0xFF00) as usize] = value,
             0xFF80 => (),
             0xFF80..=0xFFFE => self.high_ram[(address - 0xFF80) as usize] = value,
@@ -148,20 +154,22 @@ impl MMU {
             previously_unset = true;
         }
 
-        self.joypad_state &= 1 << key;
+        self.joypad_state &= !(1 << key);
 
         let mut is_standard_button: bool = true;
 
-        if key < 3 {
+        if key > 3 {
+            is_standard_button = true;
+        } else {
             is_standard_button = false;
         }
 
         let mut request_interrupt: bool = false;
-        let key_req: u8 = self.rb(0xFF00);
-
-        if is_standard_button && ((key_req & (1 << 5)) == 0) {
+        if is_standard_button && ((self.io_ram[0] & (1 << 5)) == 0) {
+            // Standard
             request_interrupt = true;
-        } else if !is_standard_button && (key_req & (1 << 5) == 1) {
+        } else if !is_standard_button && (self.io_ram[0] & (1 << 4) == 0) {
+            // Directional
             request_interrupt = true;
         }
 
@@ -171,18 +179,11 @@ impl MMU {
     }
 
     fn get_joypad_state(&self) -> u8 {
-        let mut res: u8 = self.io_ram[0];
-        res ^= 0xFF;
-        if res & (1 << 4) == 0 {
-            let mut top_joypad: u8 = self.joypad_state >> 4;
-            top_joypad |= 0xF0;
-            res &= top_joypad;
-        } else if res & (1 << 5) == 0 {
-            let mut bottom_joypad: u8 = self.joypad_state & 0xF;
-            bottom_joypad |= 0xF0;
-            res &= bottom_joypad;
+        match self.io_ram[0] {
+            0x10 => self.joypad_state >> 4,
+            0x20 => self.joypad_state & 0xF,
+            _ => panic!("Error"),
         }
-        res
     }
 
     pub fn key_released(&mut self, key: u8) {

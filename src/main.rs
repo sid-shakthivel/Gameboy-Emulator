@@ -78,7 +78,40 @@ fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, mut window: Window) {
                 cpu.borrow_mut().mmu.borrow_mut().update_timers(cycles);
                 gpu.borrow_mut().update_graphics(cycles);
                 cpu.borrow_mut().do_interrupts();
-                // println!("")p
+                // println!("")
+
+                if window.is_key_down(Key::A) {
+                    cpu.borrow_mut().mmu.borrow_mut().key_pressed(4);
+                    cpu.borrow_mut().mmu.borrow_mut().key_released(4);
+                }
+                if window.is_key_down(Key::S) {
+                    cpu.borrow_mut().mmu.borrow_mut().key_pressed(5);
+                    cpu.borrow_mut().mmu.borrow_mut().key_released(5);
+                }
+                if window.is_key_down(Key::Enter) {
+                    cpu.borrow_mut().mmu.borrow_mut().key_pressed(7);
+                    cpu.borrow_mut().mmu.borrow_mut().key_released(7);
+                }
+                if window.is_key_down(Key::Space) {
+                    cpu.borrow_mut().mmu.borrow_mut().key_pressed(6);
+                    cpu.borrow_mut().mmu.borrow_mut().key_released(6);
+                }
+                if window.is_key_down(Key::Right) {
+                    cpu.borrow_mut().mmu.borrow_mut().key_pressed(0);
+                    cpu.borrow_mut().mmu.borrow_mut().key_released(0);
+                }
+                if window.is_key_down(Key::Left) {
+                    cpu.borrow_mut().mmu.borrow_mut().key_pressed(1);
+                    cpu.borrow_mut().mmu.borrow_mut().key_released(1);
+                }
+                if window.is_key_down(Key::Up) {
+                    cpu.borrow_mut().mmu.borrow_mut().key_pressed(2);
+                    cpu.borrow_mut().mmu.borrow_mut().key_released(2);
+                }
+                if window.is_key_down(Key::Down) {
+                    cpu.borrow_mut().mmu.borrow_mut().key_pressed(3);
+                    cpu.borrow_mut().mmu.borrow_mut().key_released(3);
+                }
             }
         }
 
@@ -88,44 +121,6 @@ fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, mut window: Window) {
         window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
         cycles_elapsed = 0;
 
-        if window.is_key_down(Key::A) {
-            cpu.borrow_mut().mmu.borrow_mut().key_pressed(4);
-            cpu.borrow_mut().mmu.borrow_mut().key_released(4);
-        }
-
-        if window.is_key_down(Key::S) {
-            cpu.borrow_mut().mmu.borrow_mut().key_pressed(5);
-            cpu.borrow_mut().mmu.borrow_mut().key_released(5);
-        }
-
-        if window.is_key_down(Key::Enter) {
-            cpu.borrow_mut().mmu.borrow_mut().key_pressed(7);
-            cpu.borrow_mut().mmu.borrow_mut().key_released(7);
-        }
-
-        if window.is_key_down(Key::Space) {
-            cpu.borrow_mut().mmu.borrow_mut().key_pressed(6);
-            cpu.borrow_mut().mmu.borrow_mut().key_released(6);
-        }
-
-        if window.is_key_down(Key::Right) {
-            cpu.borrow_mut().mmu.borrow_mut().key_pressed(0);
-            cpu.borrow_mut().mmu.borrow_mut().key_released(0);
-        }
-
-        if window.is_key_down(Key::Left) {
-            cpu.borrow_mut().mmu.borrow_mut().key_pressed(1);
-            cpu.borrow_mut().mmu.borrow_mut().key_released(1);
-        }
-
-        if window.is_key_down(Key::Up) {
-            cpu.borrow_mut().mmu.borrow_mut().key_pressed(2);
-            cpu.borrow_mut().mmu.borrow_mut().key_released(2);
-        }
-
-        if window.is_key_down(Key::Down) {
-            cpu.borrow_mut().mmu.borrow_mut().key_pressed(3);
-            cpu.borrow_mut().mmu.borrow_mut().key_released(3);
-        }
+        // println!("{:b}", cpu.borrow_mut().mmu.borrow().joypad_state);
     }
 }

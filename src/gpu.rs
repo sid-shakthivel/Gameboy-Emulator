@@ -302,7 +302,6 @@ impl GPU {
                 .mmu
                 .borrow()
                 .rb(offset.wrapping_add(0xFE00).wrapping_add(3));
-            let belowbg: bool = attributes & (1 << 7) != 0;
             let y_flip: bool = self.test_bit(attributes, 6);
             let x_flip: bool = self.test_bit(attributes, 5);
 
@@ -320,7 +319,6 @@ impl GPU {
                 let mut line: i32 = (current_scanline as i32) - (y_pos as i32);
 
                 if y_flip {
-                    println!("oh dear");
                     line -= y_offset as i32;
                     line *= -1;
                 }
@@ -332,7 +330,6 @@ impl GPU {
                 let data2 = self.mmu.borrow_mut().rb(tile_data_address + 1);
                 for mut j in (0..8).rev() {
                     if x_flip {
-                        println!("oh oh dear");
                         j -= 7;
                         j *= -1;
                     }
