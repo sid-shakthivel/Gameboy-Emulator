@@ -116,7 +116,8 @@ impl MMU {
             0xFF46 => self.dma_transfer(value as u16),
             0xFF00 => {
                 // println!("Here! {:b}", value);
-                self.io_ram[(address - 0xFF00) as usize] = value;
+                // self.io_ram[(address - 0xFF00) as usize] = value;
+                self.joypad_req = value;
             }
             0xFF00..=0xFF7F => self.io_ram[(address - 0xFF00) as usize] = value,
             0xFF80 => (),
@@ -165,10 +166,10 @@ impl MMU {
         }
 
         let mut request_interrupt: bool = false;
-        if is_standard_button && ((self.io_ram[0] & (1 << 5)) == 0) {
+        if is_standard_button && self.joypad_req & 0b100000 == 0 {
             // Standard
             request_interrupt = true;
-        } else if !is_standard_button && (self.io_ram[0] & (1 << 4) == 0) {
+        } else if !is_standard_button && (self.joypad_req & 0b10000 == 0) {
             // Directional
             request_interrupt = true;
         }
@@ -179,7 +180,7 @@ impl MMU {
     }
 
     fn get_joypad_state(&self) -> u8 {
-        match self.io_ram[0] {
+        match self.joypad_req {
             0x10 => self.joypad_state >> 4,
             0x20 => self.joypad_state & 0xF,
             _ => panic!("Error"),
