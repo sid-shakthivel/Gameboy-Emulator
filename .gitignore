@@ -5,3 +5,4 @@ trace_log.txt
 /ROMS
 .vim
 .idea
+.gitignore
