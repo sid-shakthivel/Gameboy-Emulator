@@ -1,8 +1,0 @@
-/target
-test.txt
-.DS_Store
-trace_log.txt
-/ROMS
-.vim
-.idea
-.gitignore
