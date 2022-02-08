@@ -57,7 +57,7 @@ impl Registers {
         self.l = (value & 0x00FF) as u8;
     }
 
-    pub fn clear_bit(&mut self, flag: Flags) {
+    pub fn clear_flag(&mut self, flag: Flags) {
         let n = match flag {
             Flags::Zero => 7,
             Flags::Subtract => 6,
@@ -67,7 +67,12 @@ impl Registers {
         self.f &= !(1 << n);
     }
 
-    pub fn set_bit(&mut self, flag: Flags) {
+    pub fn flag(&mut self, flag: Flags, condition: bool) {
+        if condition { self.set_flag(flag); }
+        else { self.clear_flag(flag); }
+    }
+
+    pub fn set_flag(&mut self, flag: Flags) {
         let n = match flag {
             Flags::Zero => 7,
             Flags::Subtract => 6,
@@ -78,7 +83,7 @@ impl Registers {
         self.f |= 1 << n;
     }
 
-    pub fn change_bit(&mut self, flag: Flags, x: u8) {
+    pub fn change_flag(&mut self, flag: Flags, x: u8) {
         let n = match flag {
             Flags::Zero => 7,
             Flags::Subtract => 6,
@@ -89,16 +94,7 @@ impl Registers {
         self.f = (self.f & (!(1 << n))) | (x << n);
     }
 
-    pub fn flip_bit(&mut self, flag: Flags) {
-        match flag {
-            Flags::Zero => self.f |= !(self.f & 0x80),
-            Flags::Subtract => self.f |= !(self.f & 0x40),
-            Flags::HalfCarry => self.f |= !(self.f & 0x20),
-            Flags::Carry => self.f |= !(self.f & 0x10),
-        };
-    }
-
-    pub fn get_bit(&mut self, flag: Flags) -> u8 {
+    pub fn get_flag(&mut self, flag: Flags) -> u8 {
         match flag {
             Flags::Zero => self.f & 0x80,
             Flags::Subtract => self.f & 0x40,
@@ -109,22 +105,22 @@ impl Registers {
 
     pub fn compose_flags(&mut self) -> String {
         let mut str = String::from("");
-        if self.get_bit(Flags::Zero) != 0 {
+        if self.get_flag(Flags::Zero) != 0 {
             str.push('Z');
         } else {
             str.push('-');
         }
-        if self.get_bit(Flags::Subtract) != 0 {
+        if self.get_flag(Flags::Subtract) != 0 {
             str.push('N');
         } else {
             str.push('-');
         }
-        if self.get_bit(Flags::HalfCarry) != 0 {
+        if self.get_flag(Flags::HalfCarry) != 0 {
             str.push('H');
         } else {
             str.push('-');
         }
-        if self.get_bit(Flags::Carry) != 0 {
+        if self.get_flag(Flags::Carry) != 0 {
             str.push('C');
         } else {
             str.push('-');
