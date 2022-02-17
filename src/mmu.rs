@@ -13,6 +13,8 @@ pub struct MMU {
     row0: u8,
     row1: u8,
     data: u8,
+    joypad_state: u8,
+    joypad_req: u8,
     timer_counter: u16,
     divider_counter: u16,
 }
@@ -31,6 +33,8 @@ impl MMU {
             row0: 0x0F,
             row1: 0x0F,
             data: 0xFF,
+            joypad_state: 0xFF,
+            joypad_req: 0x00,
             timer_counter: 1024,
             divider_counter: 0,
         };
@@ -100,7 +104,6 @@ impl MMU {
 
     pub fn wb(&mut self, address: u16, value: u8) {
         match address {
-            0x0000..=0x7FFF => self.rom[address as usize] = value,
             0x8000..=0x9FFF => self.graphics_ram[(address - 0x8000) as usize] = value,
             0xA000..=0xBFFF => self.external_ram[(address - 0xA000) as usize] = value,
             0xC000..=0xDFFF => self.working_ram[(address - 0xC000) as usize] = value,
@@ -119,6 +122,7 @@ impl MMU {
             0xFF00 => {
                 self.data = (self.data & 0xCF) | (value & 0x30);
                 self.update_joypad();
+                self.joypad_req = value;
             }
             0xFF00..=0xFF7F => self.io_ram[(address - 0xFF00) as usize] = value,
             0xFF80 => (),
@@ -149,63 +153,29 @@ impl MMU {
 
     // Joypad
 
-    // pub fn key_pressed(&mut self, key: u8) {
-    //     let mut previously_unset: bool = false;
-    //
-    //     if (self.joypad_state & (1 << key)) == 0 { previously_unset = true; }
-    //
-    //     self.joypad_state &= !(1 << key);
-    //
-    //     let mut is_standard_button: bool = true;
-    //
-    //     if key > 3 {
-    //         is_standard_button = true;
-    //     } else {
-    //         is_standard_button = false;
-    //     }
-    //
-    //     let mut request_interrupt: bool = false;
-    //     if is_standard_button && self.joypad_req & 0b100000 == 0 {
-    //         // Standard
-    //         request_interrupt = true;
-    //     } else if !is_standard_button && (self.joypad_req & 0b10000 == 0) {
-    //         // Directional
-    //         request_interrupt = true;
-    //     }
-    //
-    //     if request_interrupt && !previously_unset {
-    //         self.request_interrupt(4);
-    //     }
-    // }
-    //
-    // fn get_joypad_state(&self) -> u8 {
-    //     match self.joypad_req {
-    //         0x10 => self.joypad_state >> 4,
-    //         0x20 => self.joypad_state & 0xF,
-    //         _ => panic!("Error"),
-    //     }
-    // }
-
     pub fn update_joypad(&mut self) {
         let old_values = self.data & 0xF;
         let mut new_values = 0xF;
 
+        // Normal Buttons
         if self.data & 0x10 == 0x00 {
             new_values &= self.row0;
         }
+
+        // Direction
         if self.data & 0x20 == 0x00 {
             new_values &= self.row1;
         }
 
         if old_values == 0xF && new_values != 0xF {
-            println!("Here");
             self.request_interrupt(4);
         }
 
         self.data = (self.data & 0xF0) | new_values;
     }
 
-    pub fn key_pressed(&mut self, key: u8) {
+    pub fn poll_key_pressed(&mut self, key: u8) {
+        // if !activated { return }
         match key {
             0 => self.row0 &= 1 << 0,
             1 => self.row0 &= 1 << 1,
@@ -219,7 +189,8 @@ impl MMU {
         }
         self.update_joypad();
     }
-    pub fn key_released(&mut self, key: u8) {
+    pub fn poll_key_released(&mut self, key: u8) {
+        // if !activated { return }
         match key {
             0 => self.row0 |= 1 << 0,
             1 => self.row0 |= 1 << 1,

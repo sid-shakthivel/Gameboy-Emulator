@@ -14,27 +14,14 @@ use gpu::GPU;
 use mmu::MMU;
 
 extern crate minifb;
-use minifb::{Key, Window, WindowOptions};
+use minifb::{Key, Window, WindowOptions, KeyRepeat};
 
 const WIDTH: usize = 160;
 const HEIGHT: usize = 144;
 
 fn main() {
     let mut file_content: Vec<u8> = Vec::new();
-    //Passed
-    // let mut file: File = File::open("ROMS/cpu_instrs/individual/05-op rp.gb").unwrap();
-    // let mut file: File = File::open("ROMS/cpu_instrs/individual/06-ld r,r.gb").unwrap();
-    // let mut file: File = File::open("ROMS/cpu_instrs/individual/04-op r,imm.gb").unwrap();
-    // let mut file: File = File::open("ROMS/cpu_instrs/individual/01-special.gb").unwrap();
-    // let mut file: File = File::open("ROMS/cpu_instrs/individual/10-bit ops.gb").unwrap();
-    // let mut file: File = File::open("ROMS/cpu_instrs/individual/11-op a,(hl).gb").unwrap();
-    // let mut file: File = File::open("ROMS/cpu_instrs/individual/09-op r,r.gb").unwrap();
-    // let mut file: File = File::open("ROMS/cpu_instrs/individual/08-misc instrs.gb").unwrap();
-    // let mut file: File = File::open("ROMS/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb").unwrap();
-    // let mut file: File = File::open("ROMS/cpu_instrs/individual/03-op sp,hl.gb").unwrap();
-
-    let mut file: File = File::open("ROMS/cpu_instrs/individual/02-interrupts.gb").unwrap();
-    let mut file: File = File::open("ROMS/tetris").unwrap();
+    let mut file: File = File::open("ROMS/tetris.gb").unwrap();
     file.read_to_end(&mut file_content).unwrap();
     let mmu: Rc<RefCell<MMU>> = Rc::new(RefCell::new(MMU::new(file_content)));
 
@@ -63,55 +50,38 @@ fn main() {
 // pc is incremented in fetch_byte() so to get actual value, -1
 fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, mut window: Window) {
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
-    const MAXCYCLES: u32 = 70221;
+    const MAXCYCLES: u32 = 70221 * 1;
     let mut cycles_elapsed: u32 = 0;
     let mut total_cycles = 0;
     let mut cycles: u16 = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
+
+        // let buttons: [Key; 8] = [
+        //     Key::Left,
+        //     Key::Right,
+        //     Key::Up,
+        //     Key::Down,
+        //     Key::A,
+        //     Key::S,
+        //     Key::Space,
+        //     Key::Enter
+        // ];
+        //
+        // for i in 0..buttons.len() {
+        //     cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(i as u8, window.is_key_pressed(buttons[i], KeyRepeat::No));
+        //     cpu.borrow_mut().mmu.borrow_mut().poll_key_released(i as u8, window.is_key_released(buttons[i]));
+        // }
+
         while cycles_elapsed < MAXCYCLES {
             if cpu.borrow().is_stopped == false {
                 let opcode = cpu.borrow_mut().fetch_byte();
-                // print!("A: {:#X} F: {:#X} BC: {:#X} DE: {:#X} HL: {:#X} SP: {:#X} PC: {:#X} CY: {:#X} Opcode: {:#X}", cpu.borrow().registers.a, cpu.borrow().registers.f, cpu.borrow().registers.bc(), cpu.borrow().registers.de(), cpu.borrow().registers.hl(), cpu.borrow().registers.sp, cpu.borrow().registers.pc - 1, total_cycles, opcode);
+
                 cycles = (cpu.borrow_mut().execute(opcode) as u16) * 4;
                 cycles_elapsed += cycles as u32;
                 total_cycles += cycles as u32;
                 cpu.borrow_mut().mmu.borrow_mut().update_timers(cycles);
                 gpu.borrow_mut().update_graphics(cycles);
                 cpu.borrow_mut().do_interrupts();
-                // println!("")
-
-                if window.is_key_down(Key::A) {
-                    cpu.borrow_mut().mmu.borrow_mut().key_pressed(4);
-                    cpu.borrow_mut().mmu.borrow_mut().key_released(4);
-                }
-                if window.is_key_down(Key::S) {
-                    cpu.borrow_mut().mmu.borrow_mut().key_pressed(5);
-                    cpu.borrow_mut().mmu.borrow_mut().key_released(5);
-                }
-                if window.is_key_down(Key::Enter) {
-                    cpu.borrow_mut().mmu.borrow_mut().key_pressed(7);
-                    cpu.borrow_mut().mmu.borrow_mut().key_released(7);
-                }
-                if window.is_key_down(Key::Space) {
-                    cpu.borrow_mut().mmu.borrow_mut().key_pressed(6);
-                    cpu.borrow_mut().mmu.borrow_mut().key_released(6);
-                }
-                if window.is_key_down(Key::Right) {
-                    cpu.borrow_mut().mmu.borrow_mut().key_pressed(0);
-                    cpu.borrow_mut().mmu.borrow_mut().key_released(0);
-                }
-                if window.is_key_down(Key::Left) {
-                    cpu.borrow_mut().mmu.borrow_mut().key_pressed(1);
-                    cpu.borrow_mut().mmu.borrow_mut().key_released(1);
-                }
-                if window.is_key_down(Key::Up) {
-                    cpu.borrow_mut().mmu.borrow_mut().key_pressed(2);
-                    cpu.borrow_mut().mmu.borrow_mut().key_released(2);
-                }
-                if window.is_key_down(Key::Down) {
-                    cpu.borrow_mut().mmu.borrow_mut().key_pressed(3);
-                    cpu.borrow_mut().mmu.borrow_mut().key_released(3);
-                }
             }
         }
 
@@ -121,6 +91,55 @@ fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, mut window: Window) {
         window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
         cycles_elapsed = 0;
 
-        // println!("{:b}", cpu.borrow_mut().mmu.borrow().joypad_state);
+        if window.is_key_pressed(Key::A, KeyRepeat::No) {
+            cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(4);
+        }
+        if window.is_key_pressed(Key::S, KeyRepeat::No) {
+            cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(5);
+        }
+        if window.is_key_pressed(Key::Space, KeyRepeat::No) {
+            cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(6);
+        }
+        if window.is_key_pressed(Key::Enter, KeyRepeat::No) {
+            cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(7);
+        }
+        if window.is_key_pressed(Key::Right, KeyRepeat::No) {
+            cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(0);
+        }
+        if window.is_key_pressed(Key::Left, KeyRepeat::No) {
+            cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(1);
+        }
+        if window.is_key_pressed(Key::Up, KeyRepeat::No) {
+            cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(2);
+        }
+        if window.is_key_pressed(Key::Down, KeyRepeat::No) {
+            cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(3);
+        }
+
+        if window.is_key_released(Key::A) {
+            cpu.borrow_mut().mmu.borrow_mut().poll_key_released(4);
+        }
+        if window.is_key_released(Key::S) {
+            cpu.borrow_mut().mmu.borrow_mut().poll_key_released(5);
+        }
+        if window.is_key_released(Key::Space) {
+            cpu.borrow_mut().mmu.borrow_mut().poll_key_released(6);
+        }
+        if window.is_key_released(Key::Enter) {
+            cpu.borrow_mut().mmu.borrow_mut().poll_key_released(7);
+        }
+        if window.is_key_released(Key::Right) {
+            cpu.borrow_mut().mmu.borrow_mut().poll_key_released(0);
+        }
+        if window.is_key_released(Key::Left) {
+            cpu.borrow_mut().mmu.borrow_mut().poll_key_released(1);
+        }
+        if window.is_key_released(Key::Up) {
+            cpu.borrow_mut().mmu.borrow_mut().poll_key_released(2);
+        }
+        if window.is_key_released(Key::Down) {
+            cpu.borrow_mut().mmu.borrow_mut().poll_key_released(3);
+        }
     }
 }
+

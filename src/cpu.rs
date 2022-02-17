@@ -41,6 +41,13 @@ impl CPU {
 
     pub fn fetch_byte(&mut self) -> u8 {
         let b = self.mmu.borrow_mut().rb(self.registers.pc);
+        // print!(" {:x}", b);
+        self.registers.pc += 1;
+        b
+    }
+
+    pub fn fetch_opcode(&mut self) -> u8 {
+        let b = self.mmu.borrow_mut().rb(self.registers.pc);
         self.registers.pc += 1;
         b
     }
@@ -87,6 +94,7 @@ impl CPU {
         match opcode {
             0x00 => 1,
             0x01 => { let w: u16 = self.fetch_word(); self.registers.set_bc(w); 3 }
+            0x02 => { self.mmu.borrow_mut().wb(self.registers.bc(), self.registers.a); 2 }
             0x03 => { self.registers.set_bc(self.registers.bc().wrapping_add(1)); 2 }
             0x04 => { self.registers.b = self.alu_inc(self.registers.b); 1 }
             0x05 => { self.registers.b = self.alu_dec(self.registers.b); 1 }
@@ -256,7 +264,7 @@ impl CPU {
             0x73 => { self.mmu.borrow_mut().wb(self.registers.hl(), self.registers.e); 2 }
             0x74 => { self.mmu.borrow_mut().wb(self.registers.hl(), self.registers.h); 2 }
             0x75 => { self.mmu.borrow_mut().wb(self.registers.hl(), self.registers.l); 2 }
-            0x76 => { 1 } // HALT - IMPLEMENT
+            0x76 => { panic!("Oh dear"); 1 } // HALT - IMPLEMENT
             0x77 => { self.mmu.borrow_mut().wb(self.registers.hl(), self.registers.a); 2 }
             0x78 => { self.registers.a = self.registers.b; 1 }
             0x79 => { self.registers.a = self.registers.c; 1 }
@@ -450,7 +458,7 @@ impl CPU {
             }
             0xFF => self.rst(opcode),
             _ => {
-                panic!("UNKNOWN INSTRUCTION");
+                panic!("UNKNOWN INSTRUCTION {:x}", opcode);
             }
         }
     }

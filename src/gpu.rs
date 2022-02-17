@@ -11,14 +11,6 @@ pub struct GPU {
     mode: Mode,
 }
 
-enum Mode {
-    OAM,
-    VRAM,
-    HBlank,
-    VBlank,
-    None,
-}
-
 impl GPU {
     pub fn new(mmu: Rc<RefCell<MMU>>, cpu: Rc<RefCell<CPU>>) -> Self {
         Self {
@@ -60,57 +52,63 @@ impl GPU {
     }
 
     fn set_lcd_status(&mut self) {
+        let mut status = self.mmu.borrow().rb(0xFF41);
         if self.is_lcd_enabled() == 0 {
             self.scanline_counter = 456;
             self.mmu.borrow_mut().io_ram[0xFF44 - 0xFF00] = 0;
-            let status: u8 = self.mmu.borrow().rb(0xFF41) | 0x1;
+            status = self.mmu.borrow().rb(0xFF41) & 252;
+            status |= 0x01;
             self.mmu.borrow_mut().wb(0xFF41, status);
             return;
         }
 
-        let current_mode = self.mmu.borrow().rb(0xFF41) & 0x3;
+        let current_mode = status & 0x3;
         let current_scanline: u8 = self.mmu.borrow().rb(0xFF44);
         let mut new_mode = 0;
-        let mut check_bit = 0;
-        let status: u8 = self.mmu.borrow().rb(0xFF41);
+        let mut req_int = 0;
 
         if current_scanline > 144 {
             // V-Blank
             new_mode = 1;
-            check_bit = status & (1 << 3);
-            self.mmu.borrow_mut().wb(0xFF41, status | 0x1);
+            status = status & !(1 << 0);
+            status = status | (1 << 1);
+            req_int = status & (1 << 4);
+            self.mmu.borrow_mut().wb(0xFF41, status);
         } else if self.scanline_counter >= (456 - 80) {
             // Searching Sprites Attributes
             new_mode = 2;
-            self.mmu.borrow_mut().wb(0xFF41, status | 0x2);
-            check_bit = status & (1 << 4);
+            status = status & !(1 << 0);
+            status = status | (1 << 1);
+            req_int = status & (1 << 5);
+            self.mmu.borrow_mut().wb(0xFF41, status);
         } else if self.scanline_counter >= (456 - 172) {
             // Transferring Data to LCD Driver
             new_mode = 3;
-            self.mmu.borrow_mut().wb(0xFF41, status & 0x3);
+            status = status | (1 << 0);
+            status = status | (1 << 1);
+            self.mmu.borrow_mut().wb(0xFF41, status);
         } else {
             // H-Blank
             new_mode = 0;
-            self.mmu.borrow_mut().wb(0xFF41, status & 252);
-            check_bit = status & (1 << 5);
+            status = status & !(1 << 0);
+            status = status & !(1 << 1);
+            self.mmu.borrow_mut().wb(0xFF41, status);
+            req_int = status & (1 << 3);
         }
 
-        if new_mode != current_mode && check_bit > 0 {
+        if new_mode != current_mode {
             self.mmu.borrow_mut().request_interrupt(1);
         }
-
         // Coincidence Flag
         if current_scanline == self.mmu.borrow().rb(0xFF45) {
-            self.mmu.borrow_mut().wb(0xFF41, status | (1 << 2));
+            status = status | (1 << 2);
+            if status & (1 << 6) > 0 {
+                self.mmu.borrow_mut().request_interrupt(1);
+            }
         } else {
-            self.mmu.borrow_mut().wb(0xFF41, status & !(1 << 2));
+            status = status & (1 << 2);
         }
-
-        if self.mmu.borrow().rb(0xFF41) & (1 << 2) == 1
-            && self.mmu.borrow().rb(0xFF41) & (1 << 6) == 1
-        {
-            self.mmu.borrow_mut().request_interrupt(1);
-        }
+        self.mmu.borrow_mut().wb(0xFF41, status);
     }
     fn is_lcd_enabled(&self) -> u8 {
         self.mmu.borrow_mut().rb(0xFF40) & (1 << 7)
@@ -196,6 +194,11 @@ impl GPU {
         } else {
             // Must add scanline onto scroll_y as it just gives coordinates of background
             y_pos = current_scanline.wrapping_add(scroll_y);
+        }
+
+
+        if is_signed == true {
+            panic!("Oh no");
         }
 
         let tile_row: u16 = (((y_pos / 8) as u16) * 32) as u16;
