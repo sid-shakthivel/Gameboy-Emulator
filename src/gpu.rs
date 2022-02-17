@@ -8,7 +8,6 @@ pub struct GPU {
     mmu: Rc<RefCell<MMU>>,
     cpu: Rc<RefCell<CPU>>,
     pub screen_data: [u32; 23040],
-    mode: Mode,
 }
 
 impl GPU {
@@ -18,7 +17,6 @@ impl GPU {
             mmu: mmu,
             cpu: cpu,
             screen_data: [0; 23040],
-            mode: Mode::OAM,
         }
     }
 
