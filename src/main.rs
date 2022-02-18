@@ -7,6 +7,7 @@ use std::cell::RefCell;
 use std::fs::File;
 use std::io::Read;
 use std::rc::Rc;
+use std::env;
 
 use cpu::CPU;
 use gpu::GPU;
@@ -19,8 +20,12 @@ const WIDTH: usize = 160;
 const HEIGHT: usize = 144;
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        panic!("No ROM chosen");
+    }
     let mut file_content: Vec<u8> = Vec::new();
-    let mut file: File = File::open("ROMS/tetris.gb").unwrap();
+    let mut file: File = File::open(&args[1]).unwrap();
     file.read_to_end(&mut file_content).unwrap();
     let mmu: Rc<RefCell<MMU>> = Rc::new(RefCell::new(MMU::new(file_content)));
 
@@ -53,7 +58,7 @@ fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, mut window: Window) {
     let mut cycles_elapsed: u32 = 0;
     let mut total_cycles = 0;
     let mut cycles: u16 = 0;
-    while window.is_open() && !window.is_key_down(Key::Escape) {P
+    while window.is_open() && !window.is_key_down(Key::Escape) {
         while cycles_elapsed < MAXCYCLES {
             if cpu.borrow().is_stopped == false {
                 let opcode = cpu.borrow_mut().fetch_byte();
