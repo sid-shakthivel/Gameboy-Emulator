@@ -91,6 +91,7 @@ impl MMU {
             0xE000..=0xFDFF => self.working_ram[(address - 0xE000) as usize],
             0xFE00..=0xFE9F => self.sprite_oam[(address - 0xFE00) as usize],
             0xFF00 => self.joypad_state,
+            0xFF04 => self.divider_counter as u8,
             0xFF00..=0xFF7F => self.io_ram[(address - 0xFF00) as usize],
             0xFF80..=0xFFFE => self.high_ram[(address - 0xFF80) as usize],
             0xFFFF => self.interrupt_enabled_register,
@@ -165,8 +166,6 @@ impl MMU {
     }
 
     pub fn poll_key_pressed(&mut self, key: u8) {
-        // if !activated { return }
-        // println!("Space Pressed");
         match key {
             0 => self.row0 &= !(1 << 0),
             1 => self.row0 &= !(1 << 1),
@@ -181,8 +180,6 @@ impl MMU {
         self.update_joypad();
     }
     pub fn poll_key_released(&mut self, key: u8) {
-        // if !activated { return }
-        // println!("Space Released");
         match key {
             0 => self.row0 |= 1 << 0,
             1 => self.row0 |= 1 << 1,
