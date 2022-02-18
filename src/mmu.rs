@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 pub struct MMU {
     pub rom: [u8; 32769],
     pub graphics_ram: [u8; 8192],

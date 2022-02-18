@@ -875,7 +875,7 @@ impl CPU {
                 4
             }
             0xFF => { self.registers.a = self.alu_set(self.registers.a, 7); 2 }
-            _ => 1,
+            // _ => 1,
         }
     }
 

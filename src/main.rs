@@ -7,7 +7,6 @@ use std::cell::RefCell;
 use std::fs::File;
 use std::io::Read;
 use std::rc::Rc;
-use std::{thread, time};
 
 use cpu::CPU;
 use gpu::GPU;
@@ -54,24 +53,7 @@ fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, mut window: Window) {
     let mut cycles_elapsed: u32 = 0;
     let mut total_cycles = 0;
     let mut cycles: u16 = 0;
-    while window.is_open() && !window.is_key_down(Key::Escape) {
-
-        // let buttons: [Key; 8] = [
-        //     Key::Left,
-        //     Key::Right,
-        //     Key::Up,
-        //     Key::Down,
-        //     Key::A,
-        //     Key::S,
-        //     Key::Space,
-        //     Key::Enter
-        // ];
-        //
-        // for i in 0..buttons.len() {
-        //     cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(i as u8, window.is_key_pressed(buttons[i], KeyRepeat::No));
-        //     cpu.borrow_mut().mmu.borrow_mut().poll_key_released(i as u8, window.is_key_released(buttons[i]));
-        // }
-
+    while window.is_open() && !window.is_key_down(Key::Escape) {P
         while cycles_elapsed < MAXCYCLES {
             if cpu.borrow().is_stopped == false {
                 let opcode = cpu.borrow_mut().fetch_byte();
