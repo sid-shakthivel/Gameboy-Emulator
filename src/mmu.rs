@@ -87,7 +87,8 @@ impl MMU {
             0xC000..=0xDFFF => self.working_ram[(address - 0xC000) as usize],
             0xE000..=0xFDFF => self.working_ram[(address - 0xE000) as usize],
             0xFE00..=0xFE9F => self.sprite_oam[(address - 0xFE00) as usize],
-            0xFF00 => self.joypad_state,
+            // 0xFF00 => self.joypad_state,
+            0xFF00 => self.get_joypad_state(),
             0xFF04 => self.divider_counter as u8,
             0xFF00..=0xFF7F => self.io_ram[(address - 0xFF00) as usize],
             0xFF80..=0xFFFE => self.high_ram[(address - 0xFF80) as usize],
@@ -118,8 +119,8 @@ impl MMU {
             0xFF44 => self.io_ram[0xFF44 - 0xFF00] = 0,
             0xFF46 => self.dma_transfer(value as u16),
             0xFF00 => {
-                self.joypad_state = value;
-                self.update_joypad();
+                self.joypad_req = value;
+                // self.update_joypad();
             }
             0xFF00..=0xFF7F => self.io_ram[(address - 0xFF00) as usize] = value,
             0xFF80 => (),
@@ -150,44 +151,48 @@ impl MMU {
 
     // Joypad
 
-    pub fn update_joypad(&mut self) {
-        if self.joypad_state == 0x20 {
-            // Normal Buttons
-            self.joypad_state |= self.row0;
-        } else if self.joypad_state == 0x10 {
-            // Direction
-            self.joypad_state |= self.row1;
+    pub fn poll_key_pressed(&mut self, key: u8) {
+        let mut previously_unset: bool = false;
+
+        if (self.data & (1 << key)) == 0 {
+            previously_unset = true;
         }
-        // Fix triggering interrupts
-        // self.request_interrupt(4);
+
+        self.data &= !(1 << key);
+
+        let mut is_standard_button: bool = false;
+
+        if key > 3 {
+            is_standard_button = true;
+        }
+
+        let mut request_interrupt: bool = false;
+
+        if is_standard_button && self.joypad_req == 0x20 {
+            // Standard
+            request_interrupt = true;
+        } else if !is_standard_button && (self.joypad_req == 0x10) {
+            // Directional
+            request_interrupt = true;
+        }
+
+        if request_interrupt == true && previously_unset == false {
+            self.request_interrupt(4);
+        }
     }
 
-    pub fn poll_key_pressed(&mut self, key: u8) {
-        match key {
-            0 => self.row0 &= !(1 << 0),
-            1 => self.row0 &= !(1 << 1),
-            2 => self.row0 &= !(1 << 2),
-            3 => self.row0 &= !(1 << 3),
-            4 => self.row1 &= !(1 << 0),
-            5 => self.row1 &= !(1 << 1),
-            6 => self.row1 &= !(1 << 2),
-            7 => self.row1 &= !(1 << 3),
-            _ => panic!("Oh no")
+    fn get_joypad_state(&self) -> u8 {
+        let mut res = 0;
+        if self.joypad_req == 0x10 {
+            res = self.data >> 4;
+        } else if self.joypad_req == 0x20 {
+            res = self.data & 0xF;
         }
-        self.update_joypad();
+        res
     }
+
     pub fn poll_key_released(&mut self, key: u8) {
-        match key {
-            0 => self.row0 |= 1 << 0,
-            1 => self.row0 |= 1 << 1,
-            2 => self.row0 |= 1 << 2,
-            3 => self.row0 |= 1 << 3,
-            4 => self.row1 |= 1 << 0,
-            5 => self.row1 |= 1 << 1,
-            6 => self.row1 |= 1 << 2,
-            7 => self.row1 |= 1 << 3,
-            _ => panic!("Oh no")
-        }
+        self.data |= 1 << key;
     }
 
     // Timer

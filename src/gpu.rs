@@ -182,7 +182,7 @@ impl GPU {
         } else {
             tile_data_address = 0x8800;
             is_signed = true;
-            panic!("Signed!");
+            // panic!("Signed!");
         }
 
         // Determine vertical tile
@@ -192,11 +192,6 @@ impl GPU {
         } else {
             // Must add scanline onto scroll_y as it just gives coordinates of background
             y_pos = current_scanline.wrapping_add(scroll_y);
-        }
-
-
-        if is_signed == true {
-            panic!("Oh no");
         }
 
         let tile_row: u16 = (((y_pos / 8) as u16) * 32) as u16;
@@ -215,13 +210,13 @@ impl GPU {
             let tile_identifier_address = tile_identity_address + tile_col + tile_row;
 
             if is_signed {
-                // signed_tile_identifier = self.mmu.borrow_mut().rb(tile_identifier_address) as i16;
+                signed_tile_identifier = self.mmu.borrow_mut().rb(tile_identifier_address) as i16;
             } else {
                 unsigned_tile_identifier = self.mmu.borrow_mut().rb(tile_identifier_address) as u16;
             }
 
             if is_signed {
-                // tile_data_address += (signed_tile_identifier + 128) * 16;
+                tile_data_address = tile_data_address.wrapping_add(((signed_tile_identifier + 128) * 16) as u16);
             } else {
                 tile_data_address = 0x8000 + (unsigned_tile_identifier * 16);
             }
@@ -251,10 +246,6 @@ impl GPU {
                 res = res << 8 | (rgb.0 as u32);
                 res = res << 8 | (rgb.1 as u32);
                 res = res << 8 | (rgb.2 as u32);
-
-                if tile_data_address == 0x8340 {
-                    // println!("{}", res);
-                }
 
                 let test: usize = j as usize + base as usize;
                 if current_scanline <= 143 && test <= 159 {
@@ -314,9 +305,6 @@ impl GPU {
             let y_offset = if is_8x8 { 8 } else { 16 };
 
             if current_scanline >= y_pos && current_scanline < (y_pos + y_offset) {
-                if tile_identifier == 0x58 {
-                    // println!("X_POS = {} Y_POS = {}", x_pos, y_pos);
-                }
                 let mut line: i32 = (current_scanline as i32) - (y_pos as i32);
 
                 if y_flip {
@@ -370,7 +358,6 @@ impl GPU {
         }
     }
 
-    // Refactor
     fn get_colour(&mut self, palette: u8, index: i8) -> (u8, u8, u8) {
         let bit: u8 = self.get_bit(palette, index) << 1 | self.get_bit(palette, index + 1);
 

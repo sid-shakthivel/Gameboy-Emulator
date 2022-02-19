@@ -72,61 +72,20 @@ fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, mut window: Window) {
             }
         }
 
+        let keys = vec![Key::Right, Key::Left, Key::Up, Key::Down, Key::A, Key::S, Key::Space, Key::Enter];
+        for (i, key) in keys.iter().enumerate() {
+            if window.is_key_pressed(*key, KeyRepeat::No) {
+                cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(i as u8);
+            } else {
+                cpu.borrow_mut().mmu.borrow_mut().poll_key_released(i as u8);
+            }
+        }
+
         for (i, pixel) in gpu.borrow().screen_data.iter().enumerate() {
             buffer[i] = *pixel;
         }
         window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
         cycles_elapsed = 0;
-
-        if window.is_key_pressed(Key::A, KeyRepeat::No) {
-            cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(4);
-        }
-        if window.is_key_pressed(Key::S, KeyRepeat::No) {
-            cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(5);
-        }
-        if window.is_key_pressed(Key::Space, KeyRepeat::No) {
-            cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(6);
-        }
-        if window.is_key_pressed(Key::Enter, KeyRepeat::No) {
-            cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(7);
-        }
-        if window.is_key_pressed(Key::Right, KeyRepeat::No) {
-            cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(0);
-        }
-        if window.is_key_pressed(Key::Left, KeyRepeat::No) {
-            cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(1);
-        }
-        if window.is_key_pressed(Key::Up, KeyRepeat::No) {
-            cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(2);
-        }
-        if window.is_key_pressed(Key::Down, KeyRepeat::No) {
-            cpu.borrow_mut().mmu.borrow_mut().poll_key_pressed(3);
-        }
-
-        if window.is_key_released(Key::A) {
-            cpu.borrow_mut().mmu.borrow_mut().poll_key_released(4);
-        }
-        if window.is_key_released(Key::S) {
-            cpu.borrow_mut().mmu.borrow_mut().poll_key_released(5);
-        }
-        if window.is_key_released(Key::Space) {
-            cpu.borrow_mut().mmu.borrow_mut().poll_key_released(6);
-        }
-        if window.is_key_released(Key::Enter) {
-            cpu.borrow_mut().mmu.borrow_mut().poll_key_released(7);
-        }
-        if window.is_key_released(Key::Right) {
-            cpu.borrow_mut().mmu.borrow_mut().poll_key_released(0);
-        }
-        if window.is_key_released(Key::Left) {
-            cpu.borrow_mut().mmu.borrow_mut().poll_key_released(1);
-        }
-        if window.is_key_released(Key::Up) {
-            cpu.borrow_mut().mmu.borrow_mut().poll_key_released(2);
-        }
-        if window.is_key_released(Key::Down) {
-            cpu.borrow_mut().mmu.borrow_mut().poll_key_released(3);
-        }
     }
 }
 
