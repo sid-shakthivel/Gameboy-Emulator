@@ -41,13 +41,6 @@ impl CPU {
 
     pub fn fetch_byte(&mut self) -> u8 {
         let b = self.mmu.borrow_mut().rb(self.registers.pc);
-        // print!(" {:x}", b);
-        self.registers.pc += 1;
-        b
-    }
-
-    pub fn fetch_opcode(&mut self) -> u8 {
-        let b = self.mmu.borrow_mut().rb(self.registers.pc);
         self.registers.pc += 1;
         b
     }
@@ -79,7 +72,7 @@ impl CPU {
     pub fn service_interrupt(&mut self, index: u8) {
 
         if self.is_halted == true {
-            println!("NOT HALTING");
+            // println!("NOT HALTING");
             self.is_halted = false;
         }
         self.interrupt_master = false;
@@ -269,8 +262,7 @@ impl CPU {
             0x73 => { self.mmu.borrow_mut().wb(self.registers.hl(), self.registers.e); 2 }
             0x74 => { self.mmu.borrow_mut().wb(self.registers.hl(), self.registers.h); 2 }
             0x75 => { self.mmu.borrow_mut().wb(self.registers.hl(), self.registers.l); 2 }
-            // 0x76 => { panic!("Oh dear"); 1 } // HALT - IMPLEMENT
-            0x76 => { println!("HALTING"); self.is_halted = true; 1 }
+            0x76 => { self.is_halted = true; 1 }
             0x77 => { self.mmu.borrow_mut().wb(self.registers.hl(), self.registers.a); 2 }
             0x78 => { self.registers.a = self.registers.b; 1 }
             0x79 => { self.registers.a = self.registers.c; 1 }
@@ -920,7 +912,7 @@ impl CPU {
         v
     }
 
-    fn alu_rrc(&mut self, mut v: u8) -> u8 {
+    fn alu_rrc(&mut self, v: u8) -> u8 {
         let c = v & 0x01;
         let r = (v >> 1) | (if c > 0 { 0x80 } else { 0 });
         self.registers.clear_flag(Flags::Subtract);
@@ -1124,10 +1116,6 @@ impl CPU {
         self.registers.a = a;
     }
 
-    fn cpu_jr_s8(&mut self, s8: u8) {
-        self.registers.pc = (self.registers.pc as i16 + (s8) as i16) as u16;
-    }
-
     fn cpu_jr_nz_s8(&mut self, s8: i8) -> u8 {
         let zero: u8 = self.registers.get_flag(Flags::Zero);
         if zero == 0 {
@@ -1144,15 +1132,6 @@ impl CPU {
             return 3;
         }
         2
-    }
-
-    fn cpu_jr_nc_s8(&mut self, s8: i8) -> u8 {
-        let carry: u8 = self.registers.get_flag(Flags::Carry);
-        if carry == 0 {
-            self.registers.pc = ((self.registers.pc as u32 as i32) + (s8 as i32)) as u16;
-            return 2;
-        }
-        3
     }
 
     fn cpu_c_s8(&mut self, s8: u8) -> u8 {

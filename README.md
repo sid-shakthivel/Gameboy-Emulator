@@ -27,6 +27,8 @@ cargo build --release
 ./target/release/rustboy [rom_file.gb]
 ```
 
+**All joypad controls are mapped to their exact keys**
+
 ## Supported Platforms
 - MacOS
 

@@ -30,7 +30,7 @@ fn main() {
     let mmu: Rc<RefCell<MMU>> = Rc::new(RefCell::new(MMU::new(file_content)));
 
     let cpu = Rc::new(RefCell::new(CPU::new(Rc::clone(&mmu))));
-    let gpu = GPU::new(Rc::clone(&mmu), Rc::clone(&cpu));
+    let gpu = GPU::new(Rc::clone(&mmu));
 
     let mut window = Window::new(
         "Gameboy Emulator - ESC to exit",
@@ -56,7 +56,7 @@ fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, mut window: Window) {
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
     const MAXCYCLES: u32 = 70221 * 1;
     let mut cycles_elapsed: u32 = 0;
-    let mut total_cycles = 0;
+    let mut _total_cycles: u32 = 0;
     let mut cycles: u16 = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
         while cycles_elapsed < MAXCYCLES {
@@ -65,7 +65,7 @@ fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, mut window: Window) {
 
                 cycles = (cpu.borrow_mut().execute(opcode) as u16) * 4;
                 cycles_elapsed += cycles as u32;
-                total_cycles += cycles as u32;
+                _total_cycles += cycles as u32;
             }
 
             cpu.borrow_mut().mmu.borrow_mut().update_timers(cycles);

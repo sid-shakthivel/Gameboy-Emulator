@@ -102,29 +102,4 @@ impl Registers {
             Flags::Carry => self.f & 0x10,
         }
     }
-
-    pub fn compose_flags(&mut self) -> String {
-        let mut str = String::from("");
-        if self.get_flag(Flags::Zero) != 0 {
-            str.push('Z');
-        } else {
-            str.push('-');
-        }
-        if self.get_flag(Flags::Subtract) != 0 {
-            str.push('N');
-        } else {
-            str.push('-');
-        }
-        if self.get_flag(Flags::HalfCarry) != 0 {
-            str.push('H');
-        } else {
-            str.push('-');
-        }
-        if self.get_flag(Flags::Carry) != 0 {
-            str.push('C');
-        } else {
-            str.push('-');
-        }
-        str
-    }
 }

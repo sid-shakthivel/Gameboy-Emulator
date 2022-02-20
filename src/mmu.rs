@@ -7,9 +7,6 @@ pub struct MMU {
     pub io_ram: [u8; 128],
     pub high_ram: [u8; 127], // Stack
     pub interrupt_enabled_register: u8,
-    row0: u8,
-    row1: u8,
-    data: u8,
     joypad_state: u8,
     joypad_req: u8,
     timer_counter: u16,
@@ -27,9 +24,6 @@ impl MMU {
             io_ram: [0; 128],
             high_ram: [0; 127],
             interrupt_enabled_register: 0,
-            row0: 0x0F,
-            row1: 0x0F,
-            data: 0xFF,
             joypad_state: 0xFF,
             joypad_req: 0x00,
             timer_counter: 1024,
@@ -117,10 +111,7 @@ impl MMU {
             }
             0xFF44 => self.io_ram[0xFF44 - 0xFF00] = 0,
             0xFF46 => self.dma_transfer(value as u16),
-            0xFF00 => {
-                self.joypad_req = value;
-                // self.update_joypad();
-            }
+            0xFF00 =>  self.joypad_req = value,
             0xFF00..=0xFF7F => self.io_ram[(address - 0xFF00) as usize] = value,
             0xFF80 => (),
             0xFF80..=0xFFFE => self.high_ram[(address - 0xFF80) as usize] = value,
@@ -153,11 +144,11 @@ impl MMU {
     pub fn poll_key_pressed(&mut self, key: u8) {
         let mut previously_unset: bool = false;
 
-        if (self.data & (1 << key)) == 0 {
+        if (self.joypad_state & (1 << key)) == 0 {
             previously_unset = true;
         }
 
-        self.data &= !(1 << key);
+        self.joypad_state &= !(1 << key);
 
         let mut is_standard_button: bool = false;
 
@@ -183,15 +174,15 @@ impl MMU {
     fn get_joypad_state(&self) -> u8 {
         let mut res = 0;
         if self.joypad_req == 0x10 {
-            res = self.data >> 4;
+            res = self.joypad_state >> 4;
         } else if self.joypad_req == 0x20 {
-            res = self.data & 0xF;
+            res = self.joypad_state & 0xF;
         }
         res
     }
 
     pub fn poll_key_released(&mut self, key: u8) {
-        self.data |= 1 << key;
+        self.joypad_state |= 1 << key;
     }
 
     // Timer

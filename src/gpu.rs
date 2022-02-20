@@ -1,4 +1,3 @@
-use crate::cpu::CPU;
 use crate::mmu::MMU;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -6,16 +5,14 @@ use std::rc::Rc;
 pub struct GPU {
     scanline_counter: u16,
     mmu: Rc<RefCell<MMU>>,
-    cpu: Rc<RefCell<CPU>>,
     pub screen_data: [u32; 23040],
 }
 
 impl GPU {
-    pub fn new(mmu: Rc<RefCell<MMU>>, cpu: Rc<RefCell<CPU>>) -> Self {
+    pub fn new(mmu: Rc<RefCell<MMU>>) -> Self {
         Self {
             scanline_counter: 0,
             mmu: mmu,
-            cpu: cpu,
             screen_data: [0; 23040],
         }
     }
@@ -62,12 +59,11 @@ impl GPU {
 
         let current_mode = status & 0x3;
         let current_scanline: u8 = self.mmu.borrow().rb(0xFF44);
-        let mut new_mode = 0;
+        let mut new_mode = 1;
         let mut req_int = 0;
 
         if current_scanline > 144 {
             // V-Blank
-            new_mode = 1;
             status = status & !(1 << 0);
             status = status | (1 << 1);
             req_int = status & (1 << 4);
@@ -94,7 +90,7 @@ impl GPU {
             req_int = status & (1 << 3);
         }
 
-        if new_mode != current_mode {
+        if new_mode != current_mode && req_int > 0 {
             self.mmu.borrow_mut().request_interrupt(1);
         }
         // Coincidence Flag
@@ -152,15 +148,10 @@ impl GPU {
 
         let mut is_signed: bool = false;
         let mut is_window: bool = false;
-
-        let mut x_pos: u8 = 0;
         let mut y_pos: u8 = 0;
 
         if lcd_control & (1 << 5) == 1 {
-            if window_y <= current_scanline {
-                is_window = true;
-            }
-            panic!("Window!");
+            if window_y <= current_scanline { is_window = true; }
         }
 
         if is_window == false {
@@ -187,10 +178,10 @@ impl GPU {
         // Determine vertical tile
         if is_window {
             // Must subtract as window_y just gives coordinates of view
-            y_pos = current_scanline - window_y;
+            y_pos += current_scanline - window_y;
         } else {
             // Must add scanline onto scroll_y as it just gives coordinates of background
-            y_pos = current_scanline.wrapping_add(scroll_y);
+             y_pos += current_scanline.wrapping_add(scroll_y);
         }
 
         let tile_row: u16 = (((y_pos / 8) as u16) * 32) as u16;
@@ -202,7 +193,10 @@ impl GPU {
             // For Each Horizontal Pixel Loop and Adjust Framebuffer
 
             let base = i * 8;
-            x_pos = base + scroll_x;
+            let mut x_pos = base + scroll_x;
+
+            if is_window { if x_pos >= window_x { x_pos -= window_x } }
+
             let tile_col: u16 = (x_pos / 8) as u16;
             let mut signed_tile_identifier: i8 = 0;
             let mut unsigned_tile_identifier: u16 = 0;
@@ -215,7 +209,7 @@ impl GPU {
             }
 
             if is_signed {
-                tile_data_address = 0x8800 + ((((signed_tile_identifier as i16) + 128) * 16) as u16);
+                tile_data_address += ((signed_tile_identifier as i16) + 128 * 16) as u16;
             } else {
                 tile_data_address = 0x8000 + (unsigned_tile_identifier * 16);
             }
@@ -323,7 +317,7 @@ impl GPU {
                     }
                     let data_colour: u8 = self.get_bit(data2, j) << 1 | self.get_bit(data1, j);
 
-                    let mut rgb = match data_colour {
+                    let rgb = match data_colour {
                         0b00 => self.get_colour(current_colour_palette, 0),
                         0b01 => self.get_colour(current_colour_palette, 2),
                         0b10 => self.get_colour(current_colour_palette, 4),
