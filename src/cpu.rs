@@ -8,7 +8,7 @@ pub struct CPU {
     pub registers: Registers,
     pub mmu: Rc<RefCell<MMU>>,
     pub interrupt_master: bool,
-    pub is_stopped: bool,
+    pub is_halted: bool,
 }
 
 impl CPU {
@@ -28,7 +28,7 @@ impl CPU {
             },
             mmu,
             interrupt_master: true,
-            is_stopped: false,
+            is_halted: false,
         };
 
         cpu.registers.set_af(0x01B0);
@@ -77,6 +77,11 @@ impl CPU {
     }
 
     pub fn service_interrupt(&mut self, index: u8) {
+
+        if self.is_halted == true {
+            println!("NOT HALTING");
+            self.is_halted = false;
+        }
         self.interrupt_master = false;
         let interrupt_request_register: u8 = self.mmu.borrow().rb(0xFF0F) & !(1 << index);
         self.mmu.borrow_mut().wb(0xFF0F, interrupt_request_register);
@@ -108,7 +113,7 @@ impl CPU {
             0x0D => { self.registers.c = self.alu_dec(self.registers.c); 1 }
             0x0E => { self.registers.c = self.fetch_byte(); 2 }
             0x0F => { self.registers.a = self.alu_rrc(self.registers.a); self.registers.clear_flag(Flags::Zero); 1 }
-            0x10 => { self.is_stopped = true; 1 } // Check Implementation
+            0x10 => { 1 } // STOP, Check Implementation
             0x11 => { let w: u16 = self.fetch_word(); self.registers.set_de(w); 3 }
             0x12 => { self.mmu.borrow_mut().wb(self.registers.de(), self.registers.a); 2 }
             0x13 => { self.registers.set_de(self.registers.de().wrapping_add(1)); 2 }
@@ -264,7 +269,8 @@ impl CPU {
             0x73 => { self.mmu.borrow_mut().wb(self.registers.hl(), self.registers.e); 2 }
             0x74 => { self.mmu.borrow_mut().wb(self.registers.hl(), self.registers.h); 2 }
             0x75 => { self.mmu.borrow_mut().wb(self.registers.hl(), self.registers.l); 2 }
-            0x76 => { panic!("Oh dear"); 1 } // HALT - IMPLEMENT
+            // 0x76 => { panic!("Oh dear"); 1 } // HALT - IMPLEMENT
+            0x76 => { println!("HALTING"); self.is_halted = true; 1 }
             0x77 => { self.mmu.borrow_mut().wb(self.registers.hl(), self.registers.a); 2 }
             0x78 => { self.registers.a = self.registers.b; 1 }
             0x79 => { self.registers.a = self.registers.c; 1 }

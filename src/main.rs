@@ -60,16 +60,17 @@ fn cycle(cpu: Rc<RefCell<CPU>>, gpu: RefCell<GPU>, mut window: Window) {
     let mut cycles: u16 = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
         while cycles_elapsed < MAXCYCLES {
-            if cpu.borrow().is_stopped == false {
+            if cpu.borrow().is_halted == false {
                 let opcode = cpu.borrow_mut().fetch_byte();
 
                 cycles = (cpu.borrow_mut().execute(opcode) as u16) * 4;
                 cycles_elapsed += cycles as u32;
                 total_cycles += cycles as u32;
-                cpu.borrow_mut().mmu.borrow_mut().update_timers(cycles);
-                gpu.borrow_mut().update_graphics(cycles);
-                cpu.borrow_mut().do_interrupts();
             }
+
+            cpu.borrow_mut().mmu.borrow_mut().update_timers(cycles);
+            gpu.borrow_mut().update_graphics(cycles);
+            cpu.borrow_mut().do_interrupts();
         }
 
         let keys = vec![Key::Right, Key::Left, Key::Up, Key::Down, Key::A, Key::S, Key::Space, Key::Enter];

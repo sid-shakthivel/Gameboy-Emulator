@@ -170,7 +170,7 @@ impl GPU {
                 tile_identity_address = 0x9800;
             }
         } else {
-            if lcd_control & (1 << 3) > 0 {
+            if lcd_control & (1 << 6) > 0 {
                 tile_identity_address = 0x9C00;
             } else {
                 tile_identity_address = 0x9800;
@@ -182,7 +182,6 @@ impl GPU {
         } else {
             tile_data_address = 0x8800;
             is_signed = true;
-            // panic!("Signed!");
         }
 
         // Determine vertical tile
@@ -205,18 +204,18 @@ impl GPU {
             let base = i * 8;
             x_pos = base + scroll_x;
             let tile_col: u16 = (x_pos / 8) as u16;
-            let mut signed_tile_identifier: i16 = 0;
+            let mut signed_tile_identifier: i8 = 0;
             let mut unsigned_tile_identifier: u16 = 0;
             let tile_identifier_address = tile_identity_address + tile_col + tile_row;
 
             if is_signed {
-                signed_tile_identifier = self.mmu.borrow_mut().rb(tile_identifier_address) as i16;
+                signed_tile_identifier = self.mmu.borrow_mut().rb(tile_identifier_address) as i8;
             } else {
                 unsigned_tile_identifier = self.mmu.borrow_mut().rb(tile_identifier_address) as u16;
             }
 
             if is_signed {
-                tile_data_address = tile_data_address.wrapping_add(((signed_tile_identifier + 128) * 16) as u16);
+                tile_data_address = 0x8800 + ((((signed_tile_identifier as i16) + 128) * 16) as u16);
             } else {
                 tile_data_address = 0x8000 + (unsigned_tile_identifier * 16);
             }

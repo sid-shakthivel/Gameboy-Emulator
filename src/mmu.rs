@@ -87,7 +87,6 @@ impl MMU {
             0xC000..=0xDFFF => self.working_ram[(address - 0xC000) as usize],
             0xE000..=0xFDFF => self.working_ram[(address - 0xE000) as usize],
             0xFE00..=0xFE9F => self.sprite_oam[(address - 0xFE00) as usize],
-            // 0xFF00 => self.joypad_state,
             0xFF00 => self.get_joypad_state(),
             0xFF04 => self.divider_counter as u8,
             0xFF00..=0xFF7F => self.io_ram[(address - 0xFF00) as usize],
